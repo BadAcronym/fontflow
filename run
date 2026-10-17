@@ -14,7 +14,9 @@ fi
 
 args_always="-DBUILD_LINUX \
 src/fontflowtest.c \
+vendor/puddle/src/pd_string_view.c \
 -Iinclude/ \
+-Ivendor/puddle/include/ \
 -std=c99 \
 -Wextra -Wall -Wpedantic -Wconversion -Wshadow -Wsign-compare -Wtype-limits -Wunused \
 -fuse-ld=mold"
