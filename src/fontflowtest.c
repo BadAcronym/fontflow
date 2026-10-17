@@ -5,7 +5,7 @@
 
 #define FONT_PATH "fonts/notosansgothic/NotoSansGothic-Regular.ttf"
 
-i32 main
+int main
 (
     void
 ){
