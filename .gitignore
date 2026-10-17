@@ -1,2 +1,14 @@
 fonts/*
+
+BuildRules*
+.cache*
+
+build/
+bin/
+obj/
+
+compile_commands*
 compile_flags*
+*.raddbg
+*.log
+callgrind.*
