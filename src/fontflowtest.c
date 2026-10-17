@@ -25,7 +25,7 @@ int main
             FF_ERROR("failed to read scalerType from offsetTable.");
         }
 
-        ofsTable.scalerType |= (u32)(byte << (3 - i));
+        ofsTable.scalerType |= (u32)(byte << (3 - i) * 8);
     }
 
     for(u08 i = 0; i < 2; ++i)
@@ -35,7 +35,7 @@ int main
             FF_ERROR("failed to read numTables from offsetTable.");
         }
 
-        ofsTable.scalerType |= (u32)(byte << (1 - i));
+        ofsTable.scalerType |= (u32)(byte << (1 - i) * 8);
     }
 
     for(u08 i = 0; i < 2; ++i)
@@ -54,7 +54,7 @@ int main
             FF_ERROR("failed to read entrySelector from offsetTable.");
         }
 
-        ofsTable.entrySelector |= (byte << (1 - i));
+        ofsTable.entrySelector |= (byte << (1 - i) * 8);
     }
     for(u08 i = 0; i < 2; ++i)
     {
@@ -63,7 +63,7 @@ int main
             FF_ERROR("failed to read rangeShift from offsetTable.");
         }
 
-        ofsTable.rangeShift |= (byte << (1 - i));
+        ofsTable.rangeShift |= (byte << (1 - i) * 8);
     }
 
     FF_DEBUG("reading %"PRIu16" tables.", ofsTable.numTables);
