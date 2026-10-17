@@ -1,6 +1,6 @@
-#include <inttypes.h>
+#include "fontflow.h"
 
-int32_t main
+i32 main
 (
     void
 ){
