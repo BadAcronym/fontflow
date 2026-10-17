@@ -15,4 +15,14 @@ typedef __INT64_TYPE__  i64;
 
 typedef __SIZE_TYPE__   size;
 
+typedef struct OffsetTable
+{
+    u32 scalerType;
+    u16 numTables;
+    u16 searchRange;
+    u16 entrySelector;
+    u16 rangeShift;
+}
+OffsetTable;
+
 #endif
