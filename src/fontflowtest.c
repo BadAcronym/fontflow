@@ -131,283 +131,267 @@ int main
     FF_DEBUG("reading %"PRIu16" tables.", ofsTable.numTables);
     for(u16 i = 0; i < ofsTable.numTables; ++i)
     {
-        char tagBuf[4];
+        char tagBuf[4] = {0};
 
-        StringView tag = {0};
-        tag.data = tagBuf;
-        tag.size = 4;
+        TableEntry table = {0};
+
+        table.tag.data = tagBuf;
+        table.tag.size = 4;
 
         if(fread(&tagBuf, 4, 1, file) != 1)
         {
-            FF_ERROR("failed to read tag %"PRIu16" from offsetTable.", i);
+            FF_ERROR("failed to read tag from table entry %"PRIu16".", i);
             goto closefile;
         }
+        FF_DEBUG("read tag: '"PRI_SV"'", ARG_SV(table.tag));
 
-        FF_DEBUG("read tag: '"PRI_SV"'", ARG_SV(tag));
+        for(u08 i = 0; i < 4; ++i)
+        {
+            if(fread(&byte, 1, 1, file) != 1)
+            {
+                FF_ERROR("failed to read checksum from table entry %"PRIu16".", i);
+                goto closefile;
+            }
 
-        if(pdSVSame(tag, GDEFIdent))
-        {
-            // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
+            table.checksum |= (u32)(byte << (3 - i) * 8);
         }
-        else if(pdSVSame(tag, GPOSIdent))
+        FF_DEBUG("read table checksum: 0x%"PRIX32, table.checksum);
+
+        for(u08 i = 0; i < 4; ++i)
         {
-            // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
+            if(fread(&byte, 1, 1, file) != 1)
+            {
+                FF_ERROR("failed to read offset from table entry %"PRIu16".", i);
+                goto closefile;
+            }
+
+            table.offset |= (u32)(byte << (3 - i) * 8);
         }
-        else if(pdSVSame(tag, GSUBIdent))
+        FF_DEBUG("read table offset: %"PRIu32, table.offset);
+
+        for(u08 i = 0; i < 4; ++i)
         {
-            // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
+            if(fread(&byte, 1, 1, file) != 1)
+            {
+                FF_ERROR("failed to read length from table entry %"PRIu16".", i);
+                goto closefile;
+            }
+
+            table.length |= (u32)(byte << (3 - i) * 8);
         }
-        else if(pdSVSame(tag, acntIdent))
+        FF_DEBUG("read table length: %"PRIu32, table.length);
+
+        if(pdSVSame(table.tag, GDEFIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, ankrIdent))
+        else if(pdSVSame(table.tag, GPOSIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, avarIdent))
+        else if(pdSVSame(table.tag, GSUBIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, bdatIdent))
+        else if(pdSVSame(table.tag, acntIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, bhedIdent))
+        else if(pdSVSame(table.tag, ankrIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, blocIdent))
+        else if(pdSVSame(table.tag, avarIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, bslnIdent))
+        else if(pdSVSame(table.tag, bdatIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, cmapIdent))
+        else if(pdSVSame(table.tag, bhedIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, cvarIdent))
+        else if(pdSVSame(table.tag, blocIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, cvtIdent))
+        else if(pdSVSame(table.tag, bslnIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, EBSCIdent))
+        else if(pdSVSame(table.tag, cmapIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, fdscIdent))
+        else if(pdSVSame(table.tag, cvarIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, featIdent))
+        else if(pdSVSame(table.tag, cvtIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, fmtxIdent))
+        else if(pdSVSame(table.tag, EBSCIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, fondIdent))
+        else if(pdSVSame(table.tag, fdscIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, fpgmIdent))
+        else if(pdSVSame(table.tag, featIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, fvarIdent))
+        else if(pdSVSame(table.tag, fmtxIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, gaspIdent))
+        else if(pdSVSame(table.tag, fondIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, gcidIdent))
+        else if(pdSVSame(table.tag, fpgmIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, glyfIdent))
+        else if(pdSVSame(table.tag, fvarIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, gvarIdent))
+        else if(pdSVSame(table.tag, gaspIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, hdmxIdent))
+        else if(pdSVSame(table.tag, gcidIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, headIdent))
+        else if(pdSVSame(table.tag, glyfIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, hheaIdent))
+        else if(pdSVSame(table.tag, gvarIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, hmtxIdent))
+        else if(pdSVSame(table.tag, hdmxIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, hvglIdent))
+        else if(pdSVSame(table.tag, headIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, hvpmIdent))
+        else if(pdSVSame(table.tag, hheaIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, justIdent))
+        else if(pdSVSame(table.tag, hmtxIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, kernIdent))
+        else if(pdSVSame(table.tag, hvglIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, kerxIdent))
+        else if(pdSVSame(table.tag, hvpmIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, lcarIdent))
+        else if(pdSVSame(table.tag, justIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, locaIdent))
+        else if(pdSVSame(table.tag, kernIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, ltagIdent))
+        else if(pdSVSame(table.tag, kerxIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, maxpIdent))
+        else if(pdSVSame(table.tag, lcarIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, metaIdent))
+        else if(pdSVSame(table.tag, locaIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, mortIdent))
+        else if(pdSVSame(table.tag, ltagIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, morxIdent))
+        else if(pdSVSame(table.tag, maxpIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, nameIdent))
+        else if(pdSVSame(table.tag, metaIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, opbdIdent))
+        else if(pdSVSame(table.tag, mortIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, OS2Ident))
+        else if(pdSVSame(table.tag, morxIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, postIdent))
+        else if(pdSVSame(table.tag, nameIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, prepIdent))
+        else if(pdSVSame(table.tag, opbdIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, propIdent))
+        else if(pdSVSame(table.tag, OS2Ident))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, sbixIdent))
+        else if(pdSVSame(table.tag, postIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, trakIdent))
+        else if(pdSVSame(table.tag, prepIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, vheaIdent))
+        else if(pdSVSame(table.tag, propIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, vmtxIdent))
+        else if(pdSVSame(table.tag, sbixIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, xrefIdent))
+        else if(pdSVSame(table.tag, trakIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
         }
-        else if(pdSVSame(tag, ZapfIdent))
+        else if(pdSVSame(table.tag, vheaIdent))
         {
             // ignore its data for now
-            fseek(file, 12, SEEK_CUR);
+        }
+        else if(pdSVSame(table.tag, vmtxIdent))
+        {
+            // ignore its data for now
+        }
+        else if(pdSVSame(table.tag, xrefIdent))
+        {
+            // ignore its data for now
+        }
+        else if(pdSVSame(table.tag, ZapfIdent))
+        {
+            // ignore its data for now
         }
         else
         {
-            FF_ERROR("unknown tag: '"PRI_SV"'", ARG_SV(tag));
+            FF_ERROR("unknown tag: '"PRI_SV"'", ARG_SV(table.tag));
             goto closefile;
         }
     }
