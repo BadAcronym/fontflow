@@ -72,60 +72,48 @@ int main
         return 1;
     }
 
+    fseek(file, 0, SEEK_END);
+    u64 filesize = (u64)ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    u08 *fileBuf = malloc(filesize);
+    if(!fileBuf)
+    {
+        FF_ERROR("failed to allocate fileBuf of size %"PRIu64, filesize);
+        return 2;
+    }
+
+    if(fread(fileBuf, 1, filesize, file) != filesize)
+    {
+        FF_ERROR("failed to read entire file into fileBuf.");
+        fclose(file);
+        return 3;
+    }
+    fclose(file);
+
+    u08         byte     = 0;
+    u64         index    = 0;
     OffsetTable ofsTable = {0};
 
-    u08 byte = 0;
     for(u08 i = 0; i < 4; ++i)
     {
-        if(fread(&byte, 1, 1, file) != 1)
-        {
-            FF_ERROR("failed to read scalerType from offsetTable.");
-            goto closefile;
-        }
-
-        ofsTable.scalerType |= (u32)(byte << (3 - i) * 8);
-    }
-
-    for(u08 i = 0; i < 2; ++i)
-    {
-        if(fread(&ofsTable.numTables, 1, 1, file) != 1)
-        {
-            FF_ERROR("failed to read numTables from offsetTable.");
-            goto closefile;
-        }
-
-        ofsTable.scalerType |= (u32)(byte << (1 - i) * 8);
-    }
-
-    for(u08 i = 0; i < 2; ++i)
-    {
-        if(fread(&ofsTable.searchRange, 1, 1, file) != 1)
-        {
-            FF_ERROR("failed to read searchRange from offsetTable.");
-            goto closefile;
-        }
-
-        ofsTable.searchRange |= (byte << (1 - i));
+        ofsTable.scalerType |= (u32)(fileBuf[index++] << (3 - i) * 8);
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        if(fread(&byte, 1, 1, file) != 1)
-        {
-            FF_ERROR("failed to read entrySelector from offsetTable.");
-            goto closefile;
-        }
-
-        ofsTable.entrySelector |= (byte << (1 - i) * 8);
+        ofsTable.numTables |= (u32)(fileBuf[index++] << (1 - i) * 8);
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        if(fread(&byte, 1, 1, file) != 1)
-        {
-            FF_ERROR("failed to read rangeShift from offsetTable.");
-            goto closefile;
-        }
-
-        ofsTable.rangeShift |= (byte << (1 - i) * 8);
+        ofsTable.searchRange |= (fileBuf[index++] << (1 - i));
+    }
+    for(u08 i = 0; i < 2; ++i)
+    {
+        ofsTable.entrySelector |= (fileBuf[index++] << (1 - i) * 8);
+    }
+    for(u08 i = 0; i < 2; ++i)
+    {
+        ofsTable.rangeShift |= (fileBuf[index++] << (1 - i) * 8);
     }
 
     FF_DEBUG("reading %"PRIu16" tables.", ofsTable.numTables);
@@ -138,46 +126,27 @@ int main
         table.tag.data = tagBuf;
         table.tag.size = 4;
 
-        if(fread(&tagBuf, 4, 1, file) != 1)
+        for(u08 i = 0; i < 4; ++i)
         {
-            FF_ERROR("failed to read tag from table entry %"PRIu16".", i);
-            goto closefile;
+            tagBuf[i] = (char)fileBuf[index++];
         }
         FF_DEBUG("read tag: '"PRI_SV"'", ARG_SV(table.tag));
 
         for(u08 i = 0; i < 4; ++i)
         {
-            if(fread(&byte, 1, 1, file) != 1)
-            {
-                FF_ERROR("failed to read checksum from table entry %"PRIu16".", i);
-                goto closefile;
-            }
-
-            table.checksum |= (u32)(byte << (3 - i) * 8);
+            table.checksum |= (u32)(fileBuf[index++] << (3 - i) * 8);
         }
         FF_DEBUG("read table checksum: 0x%"PRIX32, table.checksum);
 
         for(u08 i = 0; i < 4; ++i)
         {
-            if(fread(&byte, 1, 1, file) != 1)
-            {
-                FF_ERROR("failed to read offset from table entry %"PRIu16".", i);
-                goto closefile;
-            }
-
-            table.offset |= (u32)(byte << (3 - i) * 8);
+            table.offset |= (u32)(fileBuf[index++] << (3 - i) * 8);
         }
         FF_DEBUG("read table offset: %"PRIu32, table.offset);
 
         for(u08 i = 0; i < 4; ++i)
         {
-            if(fread(&byte, 1, 1, file) != 1)
-            {
-                FF_ERROR("failed to read length from table entry %"PRIu16".", i);
-                goto closefile;
-            }
-
-            table.length |= (u32)(byte << (3 - i) * 8);
+            table.length |= (u32)(fileBuf[index++] << (3 - i) * 8);
         }
         FF_DEBUG("read table length: %"PRIu32, table.length);
 
@@ -223,7 +192,8 @@ int main
         }
         else if(pdSVSame(table.tag, cmapIdent))
         {
-            // ignore its data for now
+            // TODO: read cmap data
+            // readTable_cmap();
         }
         else if(pdSVSame(table.tag, cvarIdent))
         {
@@ -392,10 +362,10 @@ int main
         else
         {
             FF_ERROR("unknown tag: '"PRI_SV"'", ARG_SV(table.tag));
-            goto closefile;
+            goto error;
         }
     }
 
-closefile:
-    fclose(file);
+error:
+    free(fileBuf);
 }
