@@ -1,0 +1,35 @@
+#!/bin/bash
+
+echo -e "\033[33mcleaning up fontflow builds...\033[0m"
+
+if [[ -d ./bin/ ]]
+then
+    rm ./bin/ -rf
+fi
+
+if [[ -f ./a.out ]]
+then
+    rm ./a.out
+fi
+
+for obj in *.o
+do
+    if [[ ! -f $obj ]]
+    then
+        continue;
+    fi
+
+    rm $obj
+done
+
+for out in callgrind.*
+do
+    if [[ ! -f $out ]]
+    then
+        continue;
+    fi
+
+    rm $out
+done
+
+echo -e "\033[32mcleaned fontflow!\n\033[0m"
