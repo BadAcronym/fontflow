@@ -61,13 +61,47 @@ s_global StringView vmtxIdent = { .data = "vmtx", .size = 4 };
 s_global StringView xrefIdent = { .data = "xref", .size = 4 };
 s_global StringView ZapfIdent = { .data = "Zapf", .size = 4 };
 
+f_internal bool verifyIDs
+(
+    u16 platformID,
+    u16 platformSpecificID
+){
+    FF_ASSERT(platformID != 2, "platformID of 2 is reserved.");
+
+    if(platformID == FF_PLATFORM_ID_UNICODE)
+    {
+        if(platformSpecificID > 6)
+        {
+            FF_ERROR("platform ID is 0 (unicode) but platformSpecificID is %"PRIu16
+                     ", which is not a valid identifier (0 - 6).", platformSpecificID);
+            return false;
+        }
+    }
+    else if(platformID == FF_PLATFORM_ID_MACINTOSH)
+    {
+        FF_DEBUG("TODO: verify Macintosh QuickDraw script code");
+    }
+    else if(platformID == FF_PLATFORM_ID_MICROSOFT)
+    {
+        if(platformSpecificID > 5 && platformSpecificID != 10)
+        {
+            FF_ERROR("platform ID is 3 (microsoft) but platformSpecificID is %"PRIu16
+                     ", which is not a valid identifier (0 - 5 | 10).",
+                     platformSpecificID);
+            return false;
+        }
+    }
+
+    return true;
+}
+
 f_internal void readTable_cmap
 (
     FontData   *font,
     TableEntry *entry
 ){
     u64 index     = 0;
-    u08 *cmapData = font->data + entry->offset + SFNT_START;
+    u08 *cmapData = font->data + entry->offset;
 
     u16 cmapVersion  = (u16)(cmapData[index++] << 8);
     cmapVersion     |= cmapData[index++];
@@ -88,11 +122,20 @@ f_internal void readTable_cmap
 
         u16 platformSpecificID  = (u16)(cmapData[index++] << 8);
         platformSpecificID     |= cmapData[index++];
-        FF_DEBUG("cmap subtable %"PRIu16" platformSpecificID: %"PRIu16, i, platformID);
+        FF_DEBUG("cmap subtable %"PRIu16" platformSpecificID: %"PRIu16, i,
+                 platformSpecificID);
 
-        u16 mappingOffset  = (u16)(cmapData[index++] << 8);
-        mappingOffset     |= cmapData[index++];
-        FF_DEBUG("cmap subtable %"PRIu16" mappingOffset: %"PRIu16, i, platformID);
+        u32 mappingOffset = 0;
+        for(u08 i = 0; i < 4; ++i)
+        {
+        mappingOffset |= (u32)cmapData[index++] << (3 - i) * 8;
+        }
+        FF_DEBUG("cmap subtable %"PRIu16" mappingOffset: %"PRIu16, i, mappingOffset);
+
+        if(!verifyIDs(platformID, platformSpecificID))
+        {
+            return;
+        }
     }
 }
 
@@ -135,23 +178,23 @@ int main
 
     for(u08 i = 0; i < 4; ++i)
     {
-        ofsTable.scalerType |= (u32)(fileBuf[index++] << (3 - i) * 8);
+        ofsTable.scalerType |= (u32)(fileBuf[index++]) << (3 - i) * 8;
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        ofsTable.numTables |= (u32)(fileBuf[index++] << (1 - i) * 8);
+        ofsTable.numTables |= (u32)(fileBuf[index++]) << (1 - i) * 8;
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        ofsTable.searchRange |= (fileBuf[index++] << (1 - i));
+        ofsTable.searchRange |= (fileBuf[index++]) << (1 - i) * 8;
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        ofsTable.entrySelector |= (fileBuf[index++] << (1 - i) * 8);
+        ofsTable.entrySelector |= (fileBuf[index++]) << (1 - i) * 8;
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        ofsTable.rangeShift |= (fileBuf[index++] << (1 - i) * 8);
+        ofsTable.rangeShift |= (fileBuf[index++]) << (1 - i) * 8;
     }
 
     FF_DEBUG("reading %"PRIu16" tables.", ofsTable.numTables);
@@ -172,19 +215,19 @@ int main
 
         for(u08 i = 0; i < 4; ++i)
         {
-            table.checksum |= (u32)(fileBuf[index++] << (3 - i) * 8);
+            table.checksum |= (u32)(fileBuf[index++]) << (3 - i) * 8;
         }
         FF_TRACE("read table checksum: 0x%"PRIX32, table.checksum);
 
         for(u08 i = 0; i < 4; ++i)
         {
-            table.offset |= (u32)(fileBuf[index++] << (3 - i) * 8);
+            table.offset |= (u32)(fileBuf[index++]) << (3 - i) * 8;
         }
         FF_TRACE("read table offset: %"PRIu32, table.offset);
 
         for(u08 i = 0; i < 4; ++i)
         {
-            table.length |= (u32)(fileBuf[index++] << (3 - i) * 8);
+            table.length |= (u32)(fileBuf[index++]) << (3 - i) * 8;
         }
         FF_TRACE("read table length: %"PRIu32, table.length);
 

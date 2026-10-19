@@ -35,4 +35,8 @@ typedef struct FontData
 }
 FontData;
 
+#define FF_PLATFORM_ID_UNICODE   0
+#define FF_PLATFORM_ID_MACINTOSH 1
+#define FF_PLATFORM_ID_MICROSOFT 3
+
 #endif
