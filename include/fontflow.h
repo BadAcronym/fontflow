@@ -7,6 +7,8 @@
 #define f_internal static
 #define s_global   static
 
+#define SFNT_START 12
+
 typedef struct OffsetTable
 {
     u32 scalerType;
@@ -25,5 +27,12 @@ typedef struct TableEntry
     u32        length;
 }
 TableEntry;
+
+typedef struct FontData
+{
+    u08        *data;
+    TableEntry *cmap;
+}
+FontData;
 
 #endif

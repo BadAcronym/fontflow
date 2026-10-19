@@ -61,6 +61,41 @@ s_global StringView vmtxIdent = { .data = "vmtx", .size = 4 };
 s_global StringView xrefIdent = { .data = "xref", .size = 4 };
 s_global StringView ZapfIdent = { .data = "Zapf", .size = 4 };
 
+f_internal void readTable_cmap
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    u64 index     = 0;
+    u08 *cmapData = font->data + entry->offset + SFNT_START;
+
+    u16 cmapVersion  = (u16)(cmapData[index++] << 8);
+    cmapVersion     |= cmapData[index++];
+
+    u16 cmapSubtables  = (u16)(cmapData[index++] << 8);
+    cmapSubtables     |= cmapData[index++];
+
+    FF_DEBUG("cmap version: %"PRIu16, cmapVersion);
+    FF_ASSERT(!cmapVersion, "cmap version must be set to 0.");
+
+    FF_DEBUG("cmap subtables: %"PRIu16, cmapSubtables);
+
+    for(u16 i = 0; i < cmapSubtables; ++i)
+    {
+        u16 platformID  = (u16)(cmapData[index++] << 8);
+        platformID     |= cmapData[index++];
+        FF_DEBUG("cmap subtable %"PRIu16" platformID: %"PRIu16, i, platformID);
+
+        u16 platformSpecificID  = (u16)(cmapData[index++] << 8);
+        platformSpecificID     |= cmapData[index++];
+        FF_DEBUG("cmap subtable %"PRIu16" platformSpecificID: %"PRIu16, i, platformID);
+
+        u16 mappingOffset  = (u16)(cmapData[index++] << 8);
+        mappingOffset     |= cmapData[index++];
+        FF_DEBUG("cmap subtable %"PRIu16" mappingOffset: %"PRIu16, i, platformID);
+    }
+}
+
 int main
 (
     void
@@ -82,6 +117,9 @@ int main
         FF_ERROR("failed to allocate fileBuf of size %"PRIu64, filesize);
         return 2;
     }
+
+    FontData font = {0};
+    font.data = fileBuf;
 
     if(fread(fileBuf, 1, filesize, file) != filesize)
     {
@@ -136,19 +174,19 @@ int main
         {
             table.checksum |= (u32)(fileBuf[index++] << (3 - i) * 8);
         }
-        FF_DEBUG("read table checksum: 0x%"PRIX32, table.checksum);
+        FF_TRACE("read table checksum: 0x%"PRIX32, table.checksum);
 
         for(u08 i = 0; i < 4; ++i)
         {
             table.offset |= (u32)(fileBuf[index++] << (3 - i) * 8);
         }
-        FF_DEBUG("read table offset: %"PRIu32, table.offset);
+        FF_TRACE("read table offset: %"PRIu32, table.offset);
 
         for(u08 i = 0; i < 4; ++i)
         {
             table.length |= (u32)(fileBuf[index++] << (3 - i) * 8);
         }
-        FF_DEBUG("read table length: %"PRIu32, table.length);
+        FF_TRACE("read table length: %"PRIu32, table.length);
 
         if(pdSVSame(table.tag, GDEFIdent))
         {
@@ -192,8 +230,7 @@ int main
         }
         else if(pdSVSame(table.tag, cmapIdent))
         {
-            // TODO: read cmap data
-            // readTable_cmap();
+            readTable_cmap(&font, &table);
         }
         else if(pdSVSame(table.tag, cvarIdent))
         {
