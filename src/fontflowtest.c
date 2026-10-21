@@ -283,6 +283,86 @@ f_internal void readTable_cmap
     }
 }
 
+f_internal void readTable_glyf
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    //
+    FF_WARN("required table 'glyf' not implemented.");
+    //
+}
+
+f_internal void readTable_head
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    //
+    FF_WARN("required table 'head' not implemented.");
+    //
+}
+
+f_internal void readTable_hhea
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    //
+    FF_WARN("required table 'hhea' not implemented.");
+    //
+}
+
+f_internal void readTable_hmtx
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    //
+    FF_WARN("required table 'hmtx' not implemented.");
+    //
+}
+
+f_internal void readTable_loca
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    //
+    FF_WARN("required table 'loca' not implemented.");
+    //
+}
+
+f_internal void readTable_maxp
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    //
+    FF_WARN("required table 'maxp' not implemented.");
+    //
+}
+
+f_internal void readTable_name
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    //
+    FF_WARN("required table 'name' not implemented.");
+    //
+}
+
+f_internal void readTable_post
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    //
+    FF_WARN("required table 'post' not implemented.");
+    //
+}
+
 int main
 (
     void
@@ -465,7 +545,7 @@ int main
         }
         else if(pdSVSame(table.tag, glyfIdent))
         {
-            // ignore its data for now
+            readTable_glyf(&font, &table);
         }
         else if(pdSVSame(table.tag, gvarIdent))
         {
@@ -477,15 +557,15 @@ int main
         }
         else if(pdSVSame(table.tag, headIdent))
         {
-            // ignore its data for now
+            readTable_head(&font, &table);
         }
         else if(pdSVSame(table.tag, hheaIdent))
         {
-            // ignore its data for now
+            readTable_hhea(&font, &table);
         }
         else if(pdSVSame(table.tag, hmtxIdent))
         {
-            // ignore its data for now
+            readTable_hmtx(&font, &table);
         }
         else if(pdSVSame(table.tag, hvglIdent))
         {
@@ -513,7 +593,7 @@ int main
         }
         else if(pdSVSame(table.tag, locaIdent))
         {
-            // ignore its data for now
+            readTable_loca(&font, &table);
         }
         else if(pdSVSame(table.tag, ltagIdent))
         {
@@ -521,7 +601,7 @@ int main
         }
         else if(pdSVSame(table.tag, maxpIdent))
         {
-            // ignore its data for now
+            readTable_maxp(&font, &table);
         }
         else if(pdSVSame(table.tag, metaIdent))
         {
@@ -537,7 +617,7 @@ int main
         }
         else if(pdSVSame(table.tag, nameIdent))
         {
-            // ignore its data for now
+            readTable_name(&font, &table);
         }
         else if(pdSVSame(table.tag, opbdIdent))
         {
@@ -549,7 +629,7 @@ int main
         }
         else if(pdSVSame(table.tag, postIdent))
         {
-            // ignore its data for now
+            readTable_post(&font, &table);
         }
         else if(pdSVSame(table.tag, prepIdent))
         {
