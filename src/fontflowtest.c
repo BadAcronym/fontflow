@@ -219,20 +219,47 @@ f_internal void readTable_cmap
             u16 segCountX2  = (u16)(subtableData[subIndex++] << 8);
             segCountX2     |= subtableData[subIndex++];
             u16 segCount = segCountX2 / 2;
-            FF_TRACE("segCount:            %"PRIu16, language);
+            FF_TRACE("segCount:            %"PRIu16, segCount);
 
             u16 searchRange  = (u16)(subtableData[subIndex++] << 8);
             searchRange     |= subtableData[subIndex++];
-            FF_TRACE("searchRange:         %"PRIu16, language);
+            FF_TRACE("searchRange:         %"PRIu16, searchRange);
 
-            // u16 entrySelector
-            // u16 rangeShift
-            // u16 endCode[segCount]
-            // u16 reservedPad
-            // u16 startCode[segCount]
-            // u16 idDelta[segCount]
-            // u16 idRangeOffset[segCount]
-            // u16 glyphIndexArray[Variable]
+            // assert that searchRange is 2 * (2**FLOOR(log2(segCount)))
+
+            u16 entrySelector  = (u16)(subtableData[subIndex++] << 8);
+            entrySelector     |= subtableData[subIndex++];
+            FF_TRACE("entrySelector:       %"PRIu16, entrySelector);
+
+            // assert that entrySelector is log2(searchRange/2)
+
+            u16 rangeShift  = (u16)(subtableData[subIndex++] << 8);
+            rangeShift     |= subtableData[subIndex++];
+            FF_TRACE("rangeShift:          %"PRIu16, rangeShift);
+
+            // assert that rangeShift is (2 * segCount) - searchRange
+
+            u16 *endCode = (u16*)(&subtableData[subIndex]);
+            subIndex += segCount * 2;
+
+            u16 reservedPad  = (u16)(subtableData[subIndex++] << 8);
+            reservedPad     |= subtableData[subIndex++];
+            FF_TRACE("reservedPad:         %"PRIu16, reservedPad);
+
+            FF_ASSERT(!reservedPad, "reservedPad in cmap subtable format 4 needs to be "
+                      "0.");
+
+            u16 *startCode = (u16*)(&subtableData[subIndex]);
+            subIndex += segCount * 2;
+
+            u16 *idDelta = (u16*)(&subtableData[subIndex]);
+            subIndex += segCount * 2;
+
+            u16 *idRangeOffset = (u16*)(&subtableData[subIndex]);
+            subIndex += segCount * 2;
+
+            u16 *glyphIndexArray = (u16*)(&subtableData[subIndex]);
+
             FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
         }
         else if(subtableFormat == 6)
