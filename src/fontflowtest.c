@@ -116,6 +116,22 @@ f_internal void readCmapFormat_2
     FF_WARN("cmap subtableFormat 2 unimplemented.");
 }
 
+f_internal u16 getGlyphIndex
+(
+    u16  *idRangeOffset,
+    u16  *startCode,
+    u16  *idDelta,
+    u64  i,
+    char c
+){
+    if(!idRangeOffset[i])
+    {
+        return idDelta[i] + 'A' % U16MAX;
+    }
+    return (*(&idRangeOffset[i] + idRangeOffset[i] / 2 + (c - startCode[i])) +
+             idDelta[i]) % U16MAX;
+}
+
 f_internal void readCmapFormat_4
 (
     u08 *subtableData,
@@ -171,13 +187,7 @@ f_internal void readCmapFormat_4
         if(startCode[i] <= 'A' && endCode[i] >= 'A')
         {
             FF_DEBUG("'A' is in segment %"PRIu16"!", i);
-            u16 segOffset   = 'A' - startCode[i];
-            u16 glyphIndex  = *(idRangeOffset[i] + 2 * ('A' - startCode[i]) +
-                                &idRangeOffset[i]);
-            if(!idRangeOffset[i])
-            {
-                glyphIndex = idDelta[i] + 'A' % U16MAX;
-            }
+            u16 glyphIndex = getGlyphIndex(idRangeOffset, startCode, idDelta, i, 'A');
             FF_DEBUG("glyphIndex of 'A' is %"PRIu16"!", glyphIndex);
         }
     }
