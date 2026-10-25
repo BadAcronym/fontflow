@@ -109,7 +109,7 @@ f_internal void readTable_cmap
     u16 cmapSubtables  = (u16)(cmapData[index++] << 8);
     cmapSubtables     |= cmapData[index++];
 
-    FF_TRACE("cmap version: %"PRIu16, cmapVersion);
+    FF_TRACE("cmap version:   %"PRIu16, cmapVersion);
     FF_ASSERT(!cmapVersion, "cmap version must be set to 0.");
 
     FF_TRACE("cmap subtables: %"PRIu16, cmapSubtables);
@@ -225,7 +225,7 @@ f_internal void readTable_cmap
             searchRange     |= subtableData[subIndex++];
             FF_TRACE("searchRange:         %"PRIu16, searchRange);
 
-            // assert that searchRange is 2 * (2**FLOOR(log2(segCount)))
+            // assert that searchRange is 2 * (2**floor(log2(segCount)))
 
             u16 entrySelector  = (u16)(subtableData[subIndex++] << 8);
             entrySelector     |= subtableData[subIndex++];
@@ -237,7 +237,9 @@ f_internal void readTable_cmap
             rangeShift     |= subtableData[subIndex++];
             FF_TRACE("rangeShift:          %"PRIu16, rangeShift);
 
-            // assert that rangeShift is (2 * segCount) - searchRange
+            FF_ASSERT(rangeShift == segCountX2 - searchRange, "rangeshift was expected "
+                      "to be %"PRIu16", instead got: %"PRIu16, segCountX2 - searchRange,
+                      rangeShift);
 
             u16 *endCode = (u16*)(&subtableData[subIndex]);
             subIndex += segCount * 2;
@@ -474,13 +476,13 @@ int main
         {
             table.offset |= (u32)(fileBuf[index++]) << (3 - i) * 8;
         }
-        FF_TRACE("read table offset: %"PRIu32, table.offset);
+        FF_TRACE("read table offset:   %"PRIu32, table.offset);
 
         for(u08 i = 0; i < 4; ++i)
         {
             table.length |= (u32)(fileBuf[index++]) << (3 - i) * 8;
         }
-        FF_TRACE("read table length: %"PRIu32, table.length);
+        FF_TRACE("read table length:   %"PRIu32, table.length);
 
         if(pdSVSame(table.tag, GDEFIdent))
         {
