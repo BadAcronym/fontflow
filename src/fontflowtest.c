@@ -95,6 +95,150 @@ f_internal bool verifyIDs
     return true;
 }
 
+f_internal void readCmapFormat_0
+(
+    u08 *subtableData,
+    u64 *subIndex
+){
+    u08 *glyphIndexArray = subtableData + (*subIndex);
+
+    FF_WARN("cmap subtableFormat 0 unimplemented.");
+}
+
+f_internal void readCmapFormat_2
+(
+    u08 *subtableData,
+    u64 *subIndex
+){
+    // u16 subHeaderKeys[256]
+    // u16 * 4 subHeaders[variable]
+
+    FF_WARN("cmap subtableFormat 2 unimplemented.");
+}
+
+f_internal void readCmapFormat_4
+(
+    u08 *subtableData,
+    u64 *subIndex
+){
+    u16 segCountX2  = (u16)(subtableData[(*subIndex)++] << 8);
+    segCountX2     |= subtableData[(*subIndex)++];
+    u16 segCount = segCountX2 / 2;
+    FF_TRACE("segCount:            %"PRIu16, segCount);
+
+    u16 searchRange  = (u16)(subtableData[(*subIndex)++] << 8);
+    searchRange     |= subtableData[(*subIndex)++];
+    FF_TRACE("searchRange:         %"PRIu16, searchRange);
+
+    // assert that searchRange is 2 * (2**floor(log2(segCount)))
+
+    u16 entrySelector  = (u16)(subtableData[(*subIndex)++] << 8);
+    entrySelector     |= subtableData[(*subIndex)++];
+    FF_TRACE("entrySelector:       %"PRIu16, entrySelector);
+
+    // assert that entrySelector is log2(searchRange/2)
+
+    u16 rangeShift  = (u16)(subtableData[(*subIndex)++] << 8);
+    rangeShift     |= subtableData[(*subIndex)++];
+    FF_TRACE("rangeShift:          %"PRIu16, rangeShift);
+
+    FF_ASSERT(rangeShift == segCountX2 - searchRange, "rangeshift was expected to be %"
+              PRIu16", instead got: %"PRIu16, segCountX2 - searchRange, rangeShift);
+
+    u16 *endCode = (u16*)(&subtableData[(*subIndex)]);
+    (*subIndex) += segCount * 2;
+
+    u16 reservedPad  = (u16)(subtableData[(*subIndex)++] << 8);
+    reservedPad     |= subtableData[(*subIndex)++];
+    FF_TRACE("reservedPad:         %"PRIu16, reservedPad);
+
+    FF_ASSERT(!reservedPad, "reservedPad in cmap subtable format 4 needs to be 0.");
+
+    u16 *startCode = (u16*)(&subtableData[(*subIndex)]);
+    (*subIndex) += segCount * 2;
+
+    u16 *idDelta = (u16*)(&subtableData[(*subIndex)]);
+    (*subIndex) += segCount * 2;
+
+    u16 *idRangeOffset = (u16*)(&subtableData[(*subIndex)]);
+    (*subIndex) += segCount * 2;
+
+    u16 *glyphIndexArray = (u16*)(&subtableData[(*subIndex)]);
+
+    // CURRENT: somehow make sense of the glyph index array?
+    for(u16 i = 0; i < segCount; ++i)
+    {
+        if(startCode[i] <= 'A' && endCode[i] >= 'A')
+        {
+            FF_DEBUG("'A' is in segment %"PRIu16"!", i);
+            u16 segOffset   = 'A' - startCode[i];
+            u16 glyphIndex  = *(idRangeOffset[i] + 2 * ('A' - startCode[i]) +
+                                &idRangeOffset[i]);
+            if(!idRangeOffset[i])
+            {
+                glyphIndex = idDelta[i] + 'A' % U16MAX;
+            }
+            FF_DEBUG("glyphIndex of 'A' is %"PRIu16"!", glyphIndex);
+        }
+    }
+
+    FF_WARN("cmap subtableFormat 4 unimplemented.");
+}
+
+f_internal void readCmapFormat_6
+(
+    u08 *subtableData,
+    u64 *subIndex
+){
+    FF_WARN("cmap subtableFormat 6 unimplemented.");
+}
+
+f_internal void readCmapFormat_8
+(
+    u08 *subtableData,
+    u64 *subIndex
+){
+    FF_WARN("cmap subtableFormat 8 unimplemented.");
+}
+
+f_internal void readCmapFormat_10
+(
+    u08 *subtableData,
+    u64 *subIndex
+){
+    FF_WARN("cmap subtableFormat 10 unimplemented.");
+}
+
+f_internal void readCmapFormat_12
+(
+    u08 *subtableData,
+    u64 *subIndex
+){
+    u32 nGroups = 0;
+    for(u08 i = 0; i < 4; ++i)
+    {
+        nGroups |= (u32)subtableData[(*subIndex)++] << (3 - i) * 8;
+    }
+    FF_TRACE("nGroups:             %"PRIu32, nGroups);
+    FF_WARN("cmap subtableFormat 12 unimplemented.");
+}
+
+f_internal void readCmapFormat_13
+(
+    u08 *subtableData,
+    u64 *subIndex
+){
+    FF_WARN("cmap subtableFormat 13 unimplemented.");
+}
+
+f_internal void readCmapFormat_14
+(
+    u08 *subtableData,
+    u64 *subIndex
+){
+    FF_WARN("cmap subtableFormat 14 unimplemented.");
+}
+
 f_internal void readTable_cmap
 (
     FontData   *font,
@@ -201,108 +345,51 @@ f_internal void readTable_cmap
         if(subtableFormat == 0)
         {
             FF_ASSERT(length == 262, "length of cmap subtable format 0 has to be 262, "
-                      "but is: %"PRIu16, length);
+                      "but is: %" PRIu16, length);
 
-            u08 *glyphIndexArray = subtableData + subIndex;
-
-            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
+            readCmapFormat_0(subtableData, &subIndex);
         }
         else if(subtableFormat == 2)
         {
-            // u16 subHeaderKeys[256]
-            // u16 * 4 subHeaders[variable]
-
-            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
+            readCmapFormat_2(subtableData, &subIndex);
         }
         else if(subtableFormat == 4)
         {
-            u16 segCountX2  = (u16)(subtableData[subIndex++] << 8);
-            segCountX2     |= subtableData[subIndex++];
-            u16 segCount = segCountX2 / 2;
-            FF_TRACE("segCount:            %"PRIu16, segCount);
-
-            u16 searchRange  = (u16)(subtableData[subIndex++] << 8);
-            searchRange     |= subtableData[subIndex++];
-            FF_TRACE("searchRange:         %"PRIu16, searchRange);
-
-            // assert that searchRange is 2 * (2**floor(log2(segCount)))
-
-            u16 entrySelector  = (u16)(subtableData[subIndex++] << 8);
-            entrySelector     |= subtableData[subIndex++];
-            FF_TRACE("entrySelector:       %"PRIu16, entrySelector);
-
-            // assert that entrySelector is log2(searchRange/2)
-
-            u16 rangeShift  = (u16)(subtableData[subIndex++] << 8);
-            rangeShift     |= subtableData[subIndex++];
-            FF_TRACE("rangeShift:          %"PRIu16, rangeShift);
-
-            FF_ASSERT(rangeShift == segCountX2 - searchRange, "rangeshift was expected "
-                      "to be %"PRIu16", instead got: %"PRIu16, segCountX2 - searchRange,
-                      rangeShift);
-
-            u16 *endCode = (u16*)(&subtableData[subIndex]);
-            subIndex += segCount * 2;
-
-            u16 reservedPad  = (u16)(subtableData[subIndex++] << 8);
-            reservedPad     |= subtableData[subIndex++];
-            FF_TRACE("reservedPad:         %"PRIu16, reservedPad);
-
-            FF_ASSERT(!reservedPad, "reservedPad in cmap subtable format 4 needs to be "
-                      "0.");
-
-            u16 *startCode = (u16*)(&subtableData[subIndex]);
-            subIndex += segCount * 2;
-
-            u16 *idDelta = (u16*)(&subtableData[subIndex]);
-            subIndex += segCount * 2;
-
-            u16 *idRangeOffset = (u16*)(&subtableData[subIndex]);
-            subIndex += segCount * 2;
-
-            u16 *glyphIndexArray = (u16*)(&subtableData[subIndex]);
-
-            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
+            readCmapFormat_4(subtableData, &subIndex);
         }
         else if(subtableFormat == 6)
         {
-            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
+            readCmapFormat_6(subtableData, &subIndex);
         }
         else if(subtableFormat == 8)
         {
             FF_ASSERT(reserved == 0, "reserved needs to be 0 for cmap subtable format "
                       "8.");
-            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
+            readCmapFormat_8(subtableData, &subIndex);
         }
         else if(subtableFormat == 10)
         {
             FF_ASSERT(reserved == 10, "reserved needs to be 0 for cmap subtable format "
                       "10.");
-            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
+            readCmapFormat_10(subtableData, &subIndex);
         }
         else if(subtableFormat == 12)
         {
             FF_ASSERT(reserved == 0, "reserved needs to be 0 for cmap subtable format "
                       "12.");
 
-            u32 nGroups = 0;
-            for(u08 i = 0; i < 4; ++i)
-            {
-                nGroups |= (u32)subtableData[subIndex++] << (3 - i) * 8;
-            }
-            FF_TRACE("nGroups:             %"PRIu32, nGroups);
-
-            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
+            readCmapFormat_12(subtableData, &subIndex);
         }
         else if(subtableFormat == 13)
         {
             FF_ASSERT(reserved == 0, "reserved needs to be 0 for cmap subtable format "
                       "13.");
-            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
+            readCmapFormat_13(subtableData, &subIndex);
         }
         else if(subtableFormat == 14)
         {
             FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
+            readCmapFormat_14(subtableData, &subIndex);
         }
         else
         {
