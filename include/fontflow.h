@@ -28,6 +28,16 @@ typedef struct TableEntry
 }
 TableEntry;
 
+typedef struct CmapSubtableInfo
+{
+    u08 *subtableData;
+    u64 subIndex;
+    u16 subtableFormat;
+    u16 platformID;
+    u16 platformSpecificID;
+}
+CmapSubtableInfo;
+
 typedef struct FontData
 {
     u08        *data;

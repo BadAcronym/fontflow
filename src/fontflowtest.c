@@ -1,6 +1,7 @@
 #include "fontflow.h"
 #include "ff_print_macros.h"
 
+#include "pd_dyn_arr.h"
 #include "pd_string_view.h"
 
 #include <inttypes.h>
@@ -268,17 +269,20 @@ f_internal void readTable_cmap
 
     FF_TRACE("cmap subtables: %"PRIu16, cmapSubtables);
 
+    CmapSubtableInfo *infos = 0;
+
     for(u16 i = 0; i < cmapSubtables; ++i)
     {
+        CmapSubtableInfo info = {0};
         FF_TRACE("\ncmap subtable index: %"PRIu16, i);
 
-        u16 platformID  = (u16)(cmapData[index++] << 8);
-        platformID     |= cmapData[index++];
-        FF_TRACE("platformID:          %"PRIu16, platformID);
+        info.platformID  = (u16)(cmapData[index++] << 8);
+        info.platformID |= cmapData[index++];
+        FF_TRACE("platformID:          %"PRIu16, info.platformID);
 
-        u16 platformSpecificID  = (u16)(cmapData[index++] << 8);
-        platformSpecificID     |= cmapData[index++];
-        FF_TRACE("platformSpecificID:  %"PRIu16, platformSpecificID);
+        info.platformSpecificID  = (u16)(cmapData[index++] << 8);
+        info.platformSpecificID |= cmapData[index++];
+        FF_TRACE("platformSpecificID:  %"PRIu16, info.platformSpecificID);
 
         u32 mappingOffset = 0;
         for(u08 i = 0; i < 4; ++i)
@@ -287,49 +291,67 @@ f_internal void readTable_cmap
         }
         FF_TRACE("mappingOffset:       %"PRIu32, mappingOffset);
 
-        if(!verifyIDs(platformID, platformSpecificID))
+        if(!verifyIDs(info.platformID, info.platformSpecificID))
         {
+            // parser error
             return;
         }
 
-        u64 subIndex        = 0;
-        u08 *subtableData   = cmapData + mappingOffset;
-        u16 subtableFormat  = (u16)(subtableData[subIndex++] << 8);
-        subtableFormat     |= subtableData[subIndex++];
-        FF_TRACE("subtableFormat:      %"PRIu16, subtableFormat);
+        info.subtableData    = cmapData + mappingOffset;
+        info.subtableFormat  = (u16)(info.subtableData[info.subIndex++] << 8);
+        info.subtableFormat |= info.subtableData[info.subIndex++];
+        FF_TRACE("subtableFormat:      %"PRIu16, info.subtableFormat);
 
+        pdArrPush(infos, info);
+    }
+
+    CmapSubtableInfo info = infos[0];
+
+    // choose most preferrable subtable format to read
+    u16 arrSize = (u16)(pdArrSize(infos));
+    for(u16 i = 0; i < arrSize; ++i)
+    {
+        if(infos[i].subtableFormat == 4)
+        {
+            info = infos[i];
+            goto chosen;
+        }
+    }
+
+chosen:
+    {
         u32 length   = 0;
         u32 language = 0;
         u16 reserved = 0;
 
-        bool needsLenLanguage = subtableFormat == 0  || subtableFormat == 2 ||
-                                subtableFormat == 4  || subtableFormat == 6;
+        bool needsLenLang = info.subtableFormat == 0  || info.subtableFormat == 2 ||
+                            info.subtableFormat == 4  || info.subtableFormat == 6;
 
-        bool needsReserved    = subtableFormat == 8  || subtableFormat == 10 ||
-                                subtableFormat == 12 || subtableFormat == 12;
+        bool needsReserved = info.subtableFormat == 8  || info.subtableFormat == 10 ||
+                             info.subtableFormat == 12 || info.subtableFormat == 12;
 
-        bool needsLen32       = needsReserved || subtableFormat == 14;
+        bool needsLen32    = needsReserved || info.subtableFormat == 14;
 
-        if(needsLenLanguage)
+        if(needsLenLang)
         {
-            length  = (u16)(subtableData[subIndex++] << 8);
-            length |= subtableData[subIndex++];
+            length  = (u16)(info.subtableData[info.subIndex++] << 8);
+            length |= info.subtableData[info.subIndex++];
             FF_TRACE("length:              %"PRIu16, length);
 
-            language  = (u16)(subtableData[subIndex++] << 8);
-            language |= subtableData[subIndex++];
+            language  = (u16)(info.subtableData[info.subIndex++] << 8);
+            language |= info.subtableData[info.subIndex++];
             FF_TRACE("language:            %"PRIu16, language);
 
-            if(language && platformID != FF_PLATFORM_ID_MACINTOSH)
+            if(language && info.platformID != FF_PLATFORM_ID_MACINTOSH)
             {
                 FF_ERROR("language code %"PRIu16" undefined for platform ID %"PRIu16".",
-                         language, platformID);
+                         language, info.platformID);
             }
         }
         else if(needsReserved)
         {
-            reserved  = (u16)(subtableData[subIndex++] << 8);
-            reserved |= subtableData[subIndex++];
+            reserved  = (u16)(info.subtableData[info.subIndex++] << 8);
+            reserved |= info.subtableData[info.subIndex++];
             FF_TRACE("reserved:            %"PRIu16, reserved);
         }
 
@@ -338,7 +360,7 @@ f_internal void readTable_cmap
             length = 0;
             for(u08 i = 0; i < 4; ++i)
             {
-                length |= (u32)subtableData[subIndex++] << (3 - i) * 8;
+                length |= (u32)info.subtableData[info.subIndex++] << (3 - i) * 8;
             }
             FF_TRACE("length:              %"PRIu32, length);
         }
@@ -347,63 +369,65 @@ f_internal void readTable_cmap
             language = 0;
             for(u08 i = 0; i < 4; ++i)
             {
-                language |= (u32)subtableData[subIndex++] << (3 - i) * 8;
+                language |= (u32)info.subtableData[info.subIndex++] << (3 - i) * 8;
             }
             FF_TRACE("language:            %"PRIu32, language);
         }
 
-        if(subtableFormat == 0)
+        if(info.subtableFormat == 0)
         {
             FF_ASSERT(length == 262, "length of cmap subtable format 0 has to be 262, "
                       "but is: %" PRIu16, length);
 
-            readCmapFormat_0(subtableData, &subIndex);
+            readCmapFormat_0(info.subtableData, &info.subIndex);
         }
-        else if(subtableFormat == 2)
+        else if(info.subtableFormat == 2)
         {
-            readCmapFormat_2(subtableData, &subIndex);
+            readCmapFormat_2(info.subtableData, &info.subIndex);
         }
-        else if(subtableFormat == 4)
+        else if(info.subtableFormat == 4)
         {
-            readCmapFormat_4(subtableData, &subIndex);
+            readCmapFormat_4(info.subtableData, &info.subIndex);
         }
-        else if(subtableFormat == 6)
+        else if(info.subtableFormat == 6)
         {
-            readCmapFormat_6(subtableData, &subIndex);
+            readCmapFormat_6(info.subtableData, &info.subIndex);
         }
-        else if(subtableFormat == 8)
+        else if(info.subtableFormat == 8)
         {
             FF_ASSERT(reserved == 0, "reserved needs to be 0 for cmap subtable format "
                       "8.");
-            readCmapFormat_8(subtableData, &subIndex);
+            readCmapFormat_8(info.subtableData, &info.subIndex);
         }
-        else if(subtableFormat == 10)
+        else if(info.subtableFormat == 10)
         {
             FF_ASSERT(reserved == 10, "reserved needs to be 0 for cmap subtable format "
                       "10.");
-            readCmapFormat_10(subtableData, &subIndex);
+            readCmapFormat_10(info.subtableData, &info.subIndex);
         }
-        else if(subtableFormat == 12)
+        else if(info.subtableFormat == 12)
         {
             FF_ASSERT(reserved == 0, "reserved needs to be 0 for cmap subtable format "
                       "12.");
 
-            readCmapFormat_12(subtableData, &subIndex);
+            readCmapFormat_12(info.subtableData, &info.subIndex);
         }
-        else if(subtableFormat == 13)
+        else if(info.subtableFormat == 13)
         {
             FF_ASSERT(reserved == 0, "reserved needs to be 0 for cmap subtable format "
                       "13.");
-            readCmapFormat_13(subtableData, &subIndex);
+            readCmapFormat_13(info.subtableData, &info.subIndex);
         }
-        else if(subtableFormat == 14)
+        else if(info.subtableFormat == 14)
         {
-            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.", subtableFormat);
-            readCmapFormat_14(subtableData, &subIndex);
+            FF_WARN("cmap subtableFormat of %"PRIu16" unimplemented.",
+                    info.subtableFormat);
+            readCmapFormat_14(info.subtableData, &info.subIndex);
         }
         else
         {
-            FF_ERROR("the cmap subtable format %"PRIu16" is unknown.", subtableFormat);
+            FF_ERROR("the cmap subtable format %"PRIu16" is unknown.",
+                     info.subtableFormat);
             return;
         }
     }
