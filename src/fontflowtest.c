@@ -561,10 +561,6 @@ f_internal void readTable_head
     i16 glyphDataFormat  = (i16)(headData[index++] << 8);
     glyphDataFormat     |= (i16)(headData[index++]);
     FF_TRACE("glyphDataFormat:      %"PRIi16, glyphDataFormat);
-
-    //
-    FF_WARN("required table 'head' not implemented.");
-    //
 }
 
 f_internal void readTable_hhea
@@ -686,10 +682,6 @@ f_internal void readTable_maxp
     u16 maxComponentDepth  = (u16)(maxpData[index++] << 8);
     maxComponentDepth     |= (u16)(maxpData[index++]);
     FF_TRACE("maxComponentDepth:    %"PRIu16, maxComponentDepth);
-
-    //
-    FF_WARN("required table 'maxp' not implemented.");
-    //
 }
 
 f_internal void readTable_name
