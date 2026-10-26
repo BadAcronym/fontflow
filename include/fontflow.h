@@ -45,6 +45,14 @@ typedef struct FontData
 }
 FontData;
 
+typedef struct FFL
+{
+    i16 before;
+    // unsure whether 'after' is u16 or i16, intuitively it's u16 tho
+    u16 after;
+}
+FFL;
+
 #define FF_PLATFORM_ID_UNICODE   0
 #define FF_PLATFORM_ID_MACINTOSH 1
 #define FF_PLATFORM_ID_MICROSOFT 3

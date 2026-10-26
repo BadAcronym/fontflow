@@ -129,8 +129,14 @@ f_internal u16 getGlyphIndex
     {
         return idDelta[i] + 'A' % U16MAX;
     }
-    return (*(&idRangeOffset[i] + idRangeOffset[i] / 2 + (c - startCode[i])) +
-             idDelta[i]) % U16MAX;
+
+    u08 *glyphIndexAddr = (u08*)(idRangeOffset[i] + 2 * (c - startCode[i]) +
+                                 &idRangeOffset[i]);
+
+    u16 glyphIndex  = (u16)(*glyphIndexAddr++ << 8);
+    glyphIndex     |= *glyphIndexAddr;
+
+    return glyphIndex + idDelta[i] % U16MAX;
 }
 
 f_internal void readCmapFormat_4
@@ -190,6 +196,18 @@ f_internal void readCmapFormat_4
             FF_DEBUG("'A' is in segment %"PRIu16"!", i);
             u16 glyphIndex = getGlyphIndex(idRangeOffset, startCode, idDelta, i, 'A');
             FF_DEBUG("glyphIndex of 'A' is %"PRIu16"!", glyphIndex);
+        }
+        if(startCode[i] <= 'B' && endCode[i] >= 'B')
+        {
+            FF_DEBUG("'B' is in segment %"PRIu16"!", i);
+            u16 glyphIndex = getGlyphIndex(idRangeOffset, startCode, idDelta, i, 'B');
+            FF_DEBUG("glyphIndex of 'B' is %"PRIu16"!", glyphIndex);
+        }
+        if(startCode[i] <= 'C' && endCode[i] >= 'C')
+        {
+            FF_DEBUG("'C' is in segment %"PRIu16"!", i);
+            u16 glyphIndex = getGlyphIndex(idRangeOffset, startCode, idDelta, i, 'C');
+            FF_DEBUG("glyphIndex of 'C' is %"PRIu16"!", glyphIndex);
         }
     }
 
@@ -448,6 +466,100 @@ f_internal void readTable_head
     FontData   *font,
     TableEntry *entry
 ){
+    u64 index     = 0;
+    u08 *headData = font->data + entry->offset;
+
+    FFL version  = {0};
+    FFL revision = {0};
+
+    version.before   = (i16)(headData[index++] << 8);
+    version.before  |= (i16)(headData[index++]);
+    version.after    = (u16)(headData[index++] << 8);
+    version.after   |= (u16)(headData[index++]);
+
+    revision.before  = (i16)(headData[index++] << 8);
+    revision.before |= (i16)(headData[index++]);
+    revision.after   = (u16)(headData[index++] << 8);
+    revision.after  |= (u16)(headData[index++]);
+
+    FF_TRACE("font version:        %"PRIi16".%"PRIu16, version.before,  version.after);
+    FF_TRACE("font revision:       %"PRIi16".%"PRIu16, revision.before, revision.after);
+
+    u32 checksumAdj = 0;
+    for(u08 i = 0; i < 4; ++i)
+    {
+        checksumAdj |= (u32)(headData[index++]) << ((3 - i) * 8);
+    }
+    FF_TRACE("checksumAdj:         %"PRIu32, checksumAdj);
+
+    u32 magicNumber = 0;
+    for(u08 i = 0; i < 4; ++i)
+    {
+        magicNumber |= (u32)(headData[index++]) << ((3 - i) * 8);
+    }
+    FF_TRACE("magicNumber:         0x%"PRIX32, magicNumber);
+
+    FF_ASSERT(magicNumber == 0x5F0F3CF5, "magicNumber does not equal 0x5F0F3CF5, "
+              "instead is: 0x%"PRIX32, magicNumber);
+
+    u16 flags  = (u16)(headData[index++] << 8);
+    flags     |= (u16)(headData[index++]);
+    FF_TRACE("flags:               %"PRIu16, flags);
+
+    u16 unitsPerEm  = (u16)(headData[index++] << 8);
+    unitsPerEm     |= (u16)(headData[index++]);
+    FF_TRACE("unitsPerEm:          %"PRIu16, unitsPerEm);
+
+    i64 created = 0;
+    for(u08 i = 0; i < 8; ++i)
+    {
+        created |= (i64)(headData[index++]) << ((7 - i) * 8);
+    }
+    FF_TRACE("created:             %"PRIi64, created);
+
+    i64 modified = 0;
+    for(u08 i = 0; i < 8; ++i)
+    {
+        modified |= (i64)(headData[index++]) << ((7 - i) * 8);
+    }
+    FF_TRACE("modified:            %"PRIi64, modified);
+
+    i16 xMin  = (i16)(headData[index++] << 8);
+    xMin     |= (i16)(headData[index++]);
+    FF_TRACE("xMin:                %"PRIi16, xMin);
+
+    i16 yMin  = (i16)(headData[index++] << 8);
+    yMin     |= (i16)(headData[index++]);
+    FF_TRACE("yMin:                %"PRIi16, yMin);
+
+    i16 xMax  = (i16)(headData[index++] << 8);
+    xMax     |= (i16)(headData[index++]);
+    FF_TRACE("xMax:                %"PRIi16, xMax);
+
+    i16 yMax  = (i16)(headData[index++] << 8);
+    yMax     |= (i16)(headData[index++]);
+    FF_TRACE("yMax:                %"PRIi16, yMax);
+
+    u16 macStyle  = (u16)(headData[index++] << 8);
+    macStyle     |= (u16)(headData[index++]);
+    FF_TRACE("macStyle:            %"PRIu16, macStyle);
+
+    u16 lowestRecPPEM  = (u16)(headData[index++] << 8);
+    lowestRecPPEM     |= (u16)(headData[index++]);
+    FF_TRACE("lowestRecPPEM:       %"PRIu16, lowestRecPPEM);
+
+    i16 fontDirectionHint  = (i16)(headData[index++] << 8);
+    fontDirectionHint     |= (i16)(headData[index++]);
+    FF_TRACE("fontDirectionHint:   %"PRIi16, fontDirectionHint);
+
+    i16 indexToLocFormat  = (i16)(headData[index++] << 8);
+    indexToLocFormat     |= (i16)(headData[index++]);
+    FF_TRACE("indexToLocFormat:    %"PRIi16, indexToLocFormat);
+
+    i16 glyphDataFormat  = (i16)(headData[index++] << 8);
+    glyphDataFormat     |= (i16)(headData[index++]);
+    FF_TRACE("glyphDataFormat:     %"PRIi16, glyphDataFormat);
+
     //
     FF_WARN("required table 'head' not implemented.");
     //
