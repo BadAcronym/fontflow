@@ -119,24 +119,22 @@ f_internal void readCmapFormat_2
 
 f_internal u16 getGlyphIndex
 (
-    u16  *idRangeOffset,
-    u16  *startCode,
-    i16  *idDelta,
+    cmap *cmap,
     u64  i,
     char c
 ){
-    if(!idRangeOffset[i])
+    if(!cmap->idRangeOffset[i])
     {
-        return (u16)(idDelta[i] + 'A' % U16MAX);
+        return (u16)(cmap->idDelta[i] + 'A' % U16MAX);
     }
 
-    u08 *glyphIndexAddr = (u08*)(idRangeOffset[i] + 2 * (c - startCode[i]) +
-                                 &idRangeOffset[i]);
+    u08 *glyphIndexAddr = (u08*)(cmap->idRangeOffset[i] + 2 *
+                                (c - cmap->startCode[i]) + &cmap->idRangeOffset[i]);
 
     u16 glyphIndex  = (u16)(*glyphIndexAddr++ << 8);
     glyphIndex     |= *glyphIndexAddr;
 
-    return (u16)(glyphIndex + idDelta[i] % U16MAX);
+    return (u16)(glyphIndex + cmap->idDelta[i] % U16MAX);
 }
 
 f_internal void readCmapFormat_4
@@ -147,31 +145,34 @@ f_internal void readCmapFormat_4
     u08 *subtableData = info->subtableData;
     u64 *subIndex     = &info->subIndex;
 
-    u16 segCountX2  = (u16)(subtableData[(*subIndex)++] << 8);
-    segCountX2     |= subtableData[(*subIndex)++];
-    u16 segCount = segCountX2 / 2;
+    font->cmap->segCountX2  = (u16)(subtableData[(*subIndex)++] << 8);
+    font->cmap->segCountX2 |= subtableData[(*subIndex)++];
+    u16 segCount = font->cmap->segCountX2 / 2;
     FF_TRACE("segCount:            %"PRIu16, segCount);
 
-    u16 searchRange  = (u16)(subtableData[(*subIndex)++] << 8);
-    searchRange     |= subtableData[(*subIndex)++];
-    FF_TRACE("searchRange:         %"PRIu16, searchRange);
+    font->cmap->searchRange  = (u16)(subtableData[(*subIndex)++] << 8);
+    font->cmap->searchRange |= subtableData[(*subIndex)++];
+    FF_TRACE("searchRange:         %"PRIu16, font->cmap->searchRange);
 
     // assert that searchRange is 2 * (2**floor(log2(segCount)))
 
-    u16 entrySelector  = (u16)(subtableData[(*subIndex)++] << 8);
-    entrySelector     |= subtableData[(*subIndex)++];
-    FF_TRACE("entrySelector:       %"PRIu16, entrySelector);
+    font->cmap->entrySelector  = (u16)(subtableData[(*subIndex)++] << 8);
+    font->cmap->entrySelector |= subtableData[(*subIndex)++];
+    FF_TRACE("entrySelector:       %"PRIu16, font->cmap->entrySelector);
 
     // assert that entrySelector is log2(searchRange/2)
 
-    u16 rangeShift  = (u16)(subtableData[(*subIndex)++] << 8);
-    rangeShift     |= subtableData[(*subIndex)++];
-    FF_TRACE("rangeShift:          %"PRIu16, rangeShift);
+    font->cmap->rangeShift  = (u16)(subtableData[(*subIndex)++] << 8);
+    font->cmap->rangeShift |= subtableData[(*subIndex)++];
+    FF_TRACE("rangeShift:          %"PRIu16, font->cmap->rangeShift);
 
-    FF_ASSERT(rangeShift == segCountX2 - searchRange, "rangeshift was expected to be %"
-              PRIu16", instead got: %"PRIu16, segCountX2 - searchRange, rangeShift);
+    FF_ASSERT(font->cmap->rangeShift == font->cmap->segCountX2 -
+              font->cmap->searchRange,
+              "rangeshift was expected to be %"PRIu16", instead got: %"PRIu16,
+              font->cmap->segCountX2 - font->cmap->searchRange,
+              font->cmap->rangeShift);
 
-    u16 *endCode = (u16*)(&subtableData[(*subIndex)]);
+    font->cmap->endCode = (u16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
     u16 reservedPad  = (u16)(subtableData[(*subIndex)++] << 8);
@@ -180,49 +181,41 @@ f_internal void readCmapFormat_4
 
     FF_ASSERT(!reservedPad, "reservedPad in cmap subtable format 4 needs to be 0.");
 
-    u16 *startCode = (u16*)(&subtableData[(*subIndex)]);
+    font->cmap->startCode = (u16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
-    i16 *idDelta = (i16*)(&subtableData[(*subIndex)]);
+    font->cmap->idDelta = (i16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
-    u16 *idRangeOffset = (u16*)(&subtableData[(*subIndex)]);
+    font->cmap->idRangeOffset = (u16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
-    u16 *glyphIndexArray = (u16*)(&subtableData[(*subIndex)]);
+    font->cmap->glyphIdArray16 = (u16*)(&subtableData[(*subIndex)]);
 
     // CURRENT: somehow make sense of the glyph index array?
     for(u16 i = 0; i < segCount; ++i)
     {
+        u16 *startCode = font->cmap->startCode;
+        u16 *endCode   = font->cmap->endCode;
         if(startCode[i] <= 'A' && endCode[i] >= 'A')
         {
             FF_DEBUG("'A' is in segment %"PRIu16"!", i);
-            u16 glyphIndex = getGlyphIndex(idRangeOffset, startCode, idDelta, i, 'A');
+            u16 glyphIndex = getGlyphIndex(font->cmap, i, 'A');
             FF_DEBUG("glyphIndex of 'A' is %"PRIu16"!", glyphIndex);
         }
         if(startCode[i] <= 'B' && endCode[i] >= 'B')
         {
             FF_DEBUG("'B' is in segment %"PRIu16"!", i);
-            u16 glyphIndex = getGlyphIndex(idRangeOffset, startCode, idDelta, i, 'B');
+            u16 glyphIndex = getGlyphIndex(font->cmap, i, 'B');
             FF_DEBUG("glyphIndex of 'B' is %"PRIu16"!", glyphIndex);
         }
         if(startCode[i] <= 'C' && endCode[i] >= 'C')
         {
             FF_DEBUG("'C' is in segment %"PRIu16"!", i);
-            u16 glyphIndex = getGlyphIndex(idRangeOffset, startCode, idDelta, i, 'C');
+            u16 glyphIndex = getGlyphIndex(font->cmap, i, 'C');
             FF_DEBUG("glyphIndex of 'C' is %"PRIu16"!", glyphIndex);
         }
     }
-
-    font->cmap->segCountX2     = segCountX2;
-    font->cmap->searchRange    = searchRange;
-    font->cmap->entrySelector  = entrySelector;
-    font->cmap->rangeShift     = rangeShift;
-    font->cmap->endCode        = endCode;
-    font->cmap->startCode      = startCode;
-    font->cmap->idDelta        = idDelta;
-    font->cmap->idRangeOffset  = idRangeOffset;
-    font->cmap->glyphIdArray16 = glyphIndexArray;
 }
 
 f_internal void readCmapFormat_6
