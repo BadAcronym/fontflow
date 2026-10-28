@@ -130,6 +130,24 @@ cmap;
 
 typedef struct head
 {
+    u16 majorVersion;
+    u16 minorVersion;
+    FFL fontRevision;
+    u32 checksumAdjustment;
+    u32 magicNumber;
+    u16 flags;
+    u16 unitsPerEm;
+    i64 created;
+    i64 modified;
+    i16 xMin;
+    i16 yMin;
+    i16 xMax;
+    i16 yMax;
+    u16 macStyle;
+    u16 lowestRecPPEM;
+    i16 fontDirectionHint;
+    i16 indexToLocFormat;
+    i16 glyphDataFormat;
 }
 head;
 
