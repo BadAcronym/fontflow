@@ -121,13 +121,13 @@ f_internal u16 getGlyphIndex
 (
     u16  *idRangeOffset,
     u16  *startCode,
-    u16  *idDelta,
+    i16  *idDelta,
     u64  i,
     char c
 ){
     if(!idRangeOffset[i])
     {
-        return idDelta[i] + 'A' % U16MAX;
+        return (u16)(idDelta[i] + 'A' % U16MAX);
     }
 
     u08 *glyphIndexAddr = (u08*)(idRangeOffset[i] + 2 * (c - startCode[i]) +
@@ -136,14 +136,17 @@ f_internal u16 getGlyphIndex
     u16 glyphIndex  = (u16)(*glyphIndexAddr++ << 8);
     glyphIndex     |= *glyphIndexAddr;
 
-    return glyphIndex + idDelta[i] % U16MAX;
+    return (u16)(glyphIndex + idDelta[i] % U16MAX);
 }
 
 f_internal void readCmapFormat_4
 (
-    u08 *subtableData,
-    u64 *subIndex
+    FontData         *font,
+    CmapSubtableInfo *info
 ){
+    u08 *subtableData = info->subtableData;
+    u64 *subIndex     = &info->subIndex;
+
     u16 segCountX2  = (u16)(subtableData[(*subIndex)++] << 8);
     segCountX2     |= subtableData[(*subIndex)++];
     u16 segCount = segCountX2 / 2;
@@ -180,7 +183,7 @@ f_internal void readCmapFormat_4
     u16 *startCode = (u16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
-    u16 *idDelta = (u16*)(&subtableData[(*subIndex)]);
+    i16 *idDelta = (i16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
     u16 *idRangeOffset = (u16*)(&subtableData[(*subIndex)]);
@@ -211,7 +214,15 @@ f_internal void readCmapFormat_4
         }
     }
 
-    FF_WARN("cmap subtableFormat 4 unimplemented.");
+    font->cmap->segCountX2     = segCountX2;
+    font->cmap->searchRange    = searchRange;
+    font->cmap->entrySelector  = entrySelector;
+    font->cmap->rangeShift     = rangeShift;
+    font->cmap->endCode        = endCode;
+    font->cmap->startCode      = startCode;
+    font->cmap->idDelta        = idDelta;
+    font->cmap->idRangeOffset  = idRangeOffset;
+    font->cmap->glyphIdArray16 = glyphIndexArray;
 }
 
 f_internal void readCmapFormat_6
@@ -392,6 +403,10 @@ chosen:
             FF_TRACE("language:            %"PRIu32, language);
         }
 
+        font->cmap->subtableFormat = info.subtableFormat;
+        font->cmap->length         = length;
+        font->cmap->language       = language;
+
         if(info.subtableFormat == 0)
         {
             FF_ASSERT(length == 262, "length of cmap subtable format 0 has to be 262, "
@@ -405,7 +420,7 @@ chosen:
         }
         else if(info.subtableFormat == 4)
         {
-            readCmapFormat_4(info.subtableData, &info.subIndex);
+            readCmapFormat_4(font, &info);
         }
         else if(info.subtableFormat == 6)
         {
@@ -597,6 +612,8 @@ f_internal void readTable_loca
     u64 index     = 0;
     u08 *locaData = font->data + entry->offset;
 
+    // there are two versions of this table, determined by
+
     //
     FF_WARN("required table 'loca' not implemented.");
     //
@@ -732,8 +749,17 @@ int main
         return 2;
     }
 
+    cmap cmap = {0};
+    head head = {0};
+    loca loca = {0};
+    maxp maxp = {0};
+
     FontData font = {0};
     font.data = fileBuf;
+    font.cmap = &cmap;
+    font.head = &head;
+    font.loca = &loca;
+    font.maxp = &maxp;
 
     if(fread(fileBuf, 1, filesize, file) != filesize)
     {
