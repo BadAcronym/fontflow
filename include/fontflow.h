@@ -153,6 +153,8 @@ head;
 
 typedef struct loca
 {
+    u16 *offsets16;
+    u32 *offsets32;
 }
 loca;
 
