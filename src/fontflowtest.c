@@ -193,10 +193,10 @@ f_internal void readCmapFormat_4
     font->cmap->glyphIdArray16 = (u16*)(&subtableData[(*subIndex)]);
 
     // CURRENT: somehow make sense of the glyph index array?
+    u16 *startCode = font->cmap->startCode;
+    u16 *endCode   = font->cmap->endCode;
     for(u16 i = 0; i < segCount; ++i)
     {
-        u16 *startCode = font->cmap->startCode;
-        u16 *endCode   = font->cmap->endCode;
         if(startCode[i] <= 'A' && endCode[i] >= 'A')
         {
             FF_DEBUG("'A' is in segment %"PRIu16"!", i);
