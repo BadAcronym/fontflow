@@ -605,11 +605,16 @@ f_internal void readTable_loca
     u64 index     = 0;
     u08 *locaData = font->data + entry->offset;
 
-    // there are two versions of this table, determined by
-
-    //
-    FF_WARN("required table 'loca' not implemented.");
-    //
+    if(font->head->indexToLocFormat == 1)
+    {
+        font->loca->offsets32 = (u32*)locaData;
+        FF_TRACE("read offset size:      32.");
+    }
+    else
+    {
+        font->loca->offsets16 = (u16*)locaData;
+        FF_TRACE("read offset size:      16.");
+    }
 }
 
 f_internal void readTable_maxp
