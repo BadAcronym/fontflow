@@ -117,6 +117,8 @@ f_internal void readCmapFormat_2
     FF_WARN("cmap subtableFormat 2 unimplemented.");
 }
 
+// TODO: maybe look at this, is my glyph index addressing off?
+// https://github.com/sphaerophoria/font-rendering/blob/master/src/main.zig#L130-L152
 f_internal u16 getGlyphIndex
 (
     cmap *cmap,
