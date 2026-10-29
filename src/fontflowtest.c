@@ -125,7 +125,7 @@ f_internal u16 getGlyphIndex
 ){
     if(!cmap->idRangeOffset[i])
     {
-        return (u16)(cmap->idDelta[i] + 'A' % U16MAX);
+        return (u16)(cmap->idDelta[i] + c % U16MAX);
     }
 
     u08 *glyphIndexAddr = (u08*)(cmap->idRangeOffset[i] + 2 *
@@ -134,7 +134,14 @@ f_internal u16 getGlyphIndex
     u16 glyphIndex  = (u16)(*glyphIndexAddr++ << 8);
     glyphIndex     |= *glyphIndexAddr;
 
-    return (u16)(glyphIndex + cmap->idDelta[i] % U16MAX);
+    if(glyphIndex)
+    {
+        glyphIndex += cmap->idDelta[i] % U16MAX;
+    }
+
+    // TESTING: is this right?
+    // return (u16)(glyphIndex + cmap->idDelta[i] % U16MAX);
+    return glyphIndex;
 }
 
 f_internal void readCmapFormat_4
@@ -145,26 +152,28 @@ f_internal void readCmapFormat_4
     u08 *subtableData = info->subtableData;
     u64 *subIndex     = &info->subIndex;
 
+    FF_TRACE("\nreading cmap format 4.");
+
     font->cmap->segCountX2  = (u16)(subtableData[(*subIndex)++] << 8);
     font->cmap->segCountX2 |= subtableData[(*subIndex)++];
     u16 segCount = font->cmap->segCountX2 / 2;
-    FF_TRACE("segCount:            %"PRIu16, segCount);
+    FF_TRACE("segCount:              %"PRIu16, segCount);
 
     font->cmap->searchRange  = (u16)(subtableData[(*subIndex)++] << 8);
     font->cmap->searchRange |= subtableData[(*subIndex)++];
-    FF_TRACE("searchRange:         %"PRIu16, font->cmap->searchRange);
+    FF_TRACE("searchRange:           %"PRIu16, font->cmap->searchRange);
 
     // assert that searchRange is 2 * (2**floor(log2(segCount)))
 
     font->cmap->entrySelector  = (u16)(subtableData[(*subIndex)++] << 8);
     font->cmap->entrySelector |= subtableData[(*subIndex)++];
-    FF_TRACE("entrySelector:       %"PRIu16, font->cmap->entrySelector);
+    FF_TRACE("entrySelector:         %"PRIu16, font->cmap->entrySelector);
 
     // assert that entrySelector is log2(searchRange/2)
 
     font->cmap->rangeShift  = (u16)(subtableData[(*subIndex)++] << 8);
     font->cmap->rangeShift |= subtableData[(*subIndex)++];
-    FF_TRACE("rangeShift:          %"PRIu16, font->cmap->rangeShift);
+    FF_TRACE("rangeShift:            %"PRIu16, font->cmap->rangeShift);
 
     FF_ASSERT(font->cmap->rangeShift == font->cmap->segCountX2 -
               font->cmap->searchRange,
@@ -177,7 +186,7 @@ f_internal void readCmapFormat_4
 
     u16 reservedPad  = (u16)(subtableData[(*subIndex)++] << 8);
     reservedPad     |= subtableData[(*subIndex)++];
-    FF_TRACE("reservedPad:         %"PRIu16, reservedPad);
+    FF_TRACE("reservedPad:           %"PRIu16, reservedPad);
 
     FF_ASSERT(!reservedPad, "reservedPad in cmap subtable format 4 needs to be 0.");
 
@@ -191,31 +200,6 @@ f_internal void readCmapFormat_4
     (*subIndex) += segCount * 2;
 
     font->cmap->glyphIdArray16 = (u16*)(&subtableData[(*subIndex)]);
-
-    // CURRENT: somehow make sense of the glyph index array?
-    u16 *startCode = font->cmap->startCode;
-    u16 *endCode   = font->cmap->endCode;
-    for(u16 i = 0; i < segCount; ++i)
-    {
-        if(startCode[i] <= 'A' && endCode[i] >= 'A')
-        {
-            FF_DEBUG("'A' is in segment %"PRIu16"!", i);
-            u16 glyphIndex = getGlyphIndex(font->cmap, i, 'A');
-            FF_DEBUG("glyphIndex of 'A' is %"PRIu16"!", glyphIndex);
-        }
-        if(startCode[i] <= 'B' && endCode[i] >= 'B')
-        {
-            FF_DEBUG("'B' is in segment %"PRIu16"!", i);
-            u16 glyphIndex = getGlyphIndex(font->cmap, i, 'B');
-            FF_DEBUG("glyphIndex of 'B' is %"PRIu16"!", glyphIndex);
-        }
-        if(startCode[i] <= 'C' && endCode[i] >= 'C')
-        {
-            FF_DEBUG("'C' is in segment %"PRIu16"!", i);
-            u16 glyphIndex = getGlyphIndex(font->cmap, i, 'C');
-            FF_DEBUG("glyphIndex of 'C' is %"PRIu16"!", glyphIndex);
-        }
-    }
 }
 
 f_internal void readCmapFormat_6
@@ -286,32 +270,32 @@ f_internal void readTable_cmap
     u16 cmapSubtables  = (u16)(cmapData[index++] << 8);
     cmapSubtables     |= cmapData[index++];
 
-    FF_TRACE("cmap version:   %"PRIu16, cmapVersion);
+    FF_TRACE("cmap version:          %"PRIu16, cmapVersion);
     FF_ASSERT(!cmapVersion, "cmap version must be set to 0.");
 
-    FF_TRACE("cmap subtables: %"PRIu16, cmapSubtables);
+    FF_TRACE("cmap subtables:        %"PRIu16, cmapSubtables);
 
     CmapSubtableInfo *infos = 0;
 
     for(u16 i = 0; i < cmapSubtables; ++i)
     {
         CmapSubtableInfo info = {0};
-        FF_TRACE("\ncmap subtable index: %"PRIu16, i);
+        FF_TRACE("\ncmap subtable index:   %"PRIu16, i);
 
         info.platformID  = (u16)(cmapData[index++] << 8);
         info.platformID |= cmapData[index++];
-        FF_TRACE("platformID:          %"PRIu16, info.platformID);
+        FF_TRACE("platformID:            %"PRIu16, info.platformID);
 
         info.platformSpecificID  = (u16)(cmapData[index++] << 8);
         info.platformSpecificID |= cmapData[index++];
-        FF_TRACE("platformSpecificID:  %"PRIu16, info.platformSpecificID);
+        FF_TRACE("platformSpecificID:    %"PRIu16, info.platformSpecificID);
 
         u32 mappingOffset = 0;
         for(u08 i = 0; i < 4; ++i)
         {
             mappingOffset |= (u32)cmapData[index++] << (3 - i) * 8;
         }
-        FF_TRACE("mappingOffset:       %"PRIu32, mappingOffset);
+        FF_TRACE("mappingOffset:         %"PRIu32, mappingOffset);
 
         if(!verifyIDs(info.platformID, info.platformSpecificID))
         {
@@ -322,7 +306,7 @@ f_internal void readTable_cmap
         info.subtableData    = cmapData + mappingOffset;
         info.subtableFormat  = (u16)(info.subtableData[info.subIndex++] << 8);
         info.subtableFormat |= info.subtableData[info.subIndex++];
-        FF_TRACE("subtableFormat:      %"PRIu16, info.subtableFormat);
+        FF_TRACE("subtableFormat:        %"PRIu16, info.subtableFormat);
 
         pdArrPush(infos, info);
     }
@@ -358,11 +342,11 @@ chosen:
         {
             length  = (u16)(info.subtableData[info.subIndex++] << 8);
             length |= info.subtableData[info.subIndex++];
-            FF_TRACE("length:              %"PRIu16, length);
+            FF_TRACE("length:                %"PRIu16, length);
 
             language  = (u16)(info.subtableData[info.subIndex++] << 8);
             language |= info.subtableData[info.subIndex++];
-            FF_TRACE("language:            %"PRIu16, language);
+            FF_TRACE("language:              %"PRIu16, language);
 
             if(language && info.platformID != FF_PLATFORM_ID_MACINTOSH)
             {
@@ -374,7 +358,7 @@ chosen:
         {
             reserved  = (u16)(info.subtableData[info.subIndex++] << 8);
             reserved |= info.subtableData[info.subIndex++];
-            FF_TRACE("reserved:            %"PRIu16, reserved);
+            FF_TRACE("reserved:              %"PRIu16, reserved);
         }
 
         if(needsLen32)
@@ -384,7 +368,7 @@ chosen:
             {
                 length |= (u32)info.subtableData[info.subIndex++] << (3 - i) * 8;
             }
-            FF_TRACE("length:              %"PRIu32, length);
+            FF_TRACE("length:                %"PRIu32, length);
         }
         if(needsReserved)
         {
@@ -393,7 +377,7 @@ chosen:
             {
                 language |= (u32)info.subtableData[info.subIndex++] << (3 - i) * 8;
             }
-            FF_TRACE("language:            %"PRIu32, language);
+            FF_TRACE("language:              %"PRIu32, language);
         }
 
         font->cmap->subtableFormat = info.subtableFormat;
@@ -608,12 +592,12 @@ f_internal void readTable_loca
     if(font->head->indexToLocFormat == 1)
     {
         font->loca->offsets32 = (u32*)locaData;
-        FF_TRACE("read offset size:      32.");
+        FF_TRACE("read offset size:      32");
     }
     else
     {
         font->loca->offsets16 = (u16*)locaData;
-        FF_TRACE("read offset size:      16.");
+        FF_TRACE("read offset size:      16");
     }
 }
 
@@ -631,7 +615,8 @@ f_internal void readTable_maxp
     version.before |= (i16)(maxpData[index++]);
     version.after   = (u16)(maxpData[index++] << 8);
     version.after  |= (u16)(maxpData[index++]);
-    FF_TRACE("maxp version:          %"PRIx16".%"PRIx16, version.before, version.after);
+    FF_TRACE("maxp version:          %"PRIx16".%"PRIx16,
+             version.before, version.after);
 
     u16 numGlyphs  = (u16)(maxpData[index++] << 8);
     numGlyphs     |= (u16)(maxpData[index++]);
@@ -664,7 +649,8 @@ f_internal void readTable_maxp
     font->maxp->maxZones |= (u16)(maxpData[index++]);
     FF_TRACE("maxZones:              %"PRIu16, font->maxp->maxZones);
 
-    FF_ASSERT(font->maxp->maxZones == 2, "font->maxp->maxZones  %"PRIu16" is not 2.", font->maxp->maxZones);
+    FF_ASSERT(font->maxp->maxZones == 2, "maxZones  %"PRIu16" is not 2.",
+              font->maxp->maxZones);
 
     font->maxp->maxTwilightPoints  = (u16)(maxpData[index++] << 8);
     font->maxp->maxTwilightPoints |= (u16)(maxpData[index++]);
@@ -1038,6 +1024,58 @@ int main
         {
             FF_ERROR("unknown tag: '"PRI_SV"'", ARG_SV(table.tag));
             goto error;
+        }
+    }
+
+    // CURRENT: somehow make sense of the glyph index array?
+    FF_TRACE("");
+    u16 *startCode = font.cmap->startCode;
+    u16 *endCode   = font.cmap->endCode;
+    u16 segCount   = font.cmap->segCountX2 / 2;
+    for(u16 i = 0; i < segCount; ++i)
+    {
+        for(u16 j = 0; j < 26; ++j)
+        {
+            char curr = (char)('A' + j);
+            if(startCode[i] <= curr && endCode[i] >= curr)
+            {
+                u16 glyphIndex  = getGlyphIndex(font.cmap, i, curr);
+                u16 numContours = 0;
+                u32 offset      = 0;
+                u32 offsetNext  = 0;
+
+                if(font.loca->offsets16)
+                {
+                    offset  = font.loca->offsets16[glyphIndex] & 0xFF;
+                    offset |= font.loca->offsets16[glyphIndex] >> 8;
+
+                    offsetNext  = font.loca->offsets16[glyphIndex + 1] & 0xFF;
+                    offsetNext |= font.loca->offsets16[glyphIndex + 1] >> 8;
+
+                    offset     *= 2;
+                    offsetNext *= 2;
+                }
+                else // font.loca->offsets32
+                {
+                    offset  = (font.loca->offsets32[glyphIndex] >> 0)  & 0xFF;
+                    offset |= (font.loca->offsets32[glyphIndex] >> 8)  & 0xFF;
+                    offset |= (font.loca->offsets32[glyphIndex] >> 16) & 0xFF;
+                    offset |= (font.loca->offsets32[glyphIndex] >> 24) & 0xFF;
+
+                    offsetNext  = (font.loca->offsets32[glyphIndex + 1] >> 0)  & 0xFF;
+                    offsetNext |= (font.loca->offsets32[glyphIndex + 1] >> 8)  & 0xFF;
+                    offsetNext |= (font.loca->offsets32[glyphIndex + 1] >> 16) & 0xFF;
+                    offsetNext |= (font.loca->offsets32[glyphIndex + 1] >> 24) & 0xFF;
+                }
+
+                FF_ASSERT(offsetNext >= offset, "parser error, offsetNext (%"PRIu32
+                          ") cannot be smaller than offset (%"PRIu32").",
+                          offsetNext, offset);
+
+                FF_DEBUG("glyphIndex of '%c' is %6"PRIu16". offset: %4"PRIu32
+                         ", length: %4"PRIu32" numContours: %"PRIu16,
+                         curr, glyphIndex, offset, offsetNext - offset, numContours);
+            }
         }
     }
 
