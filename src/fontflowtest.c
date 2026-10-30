@@ -123,14 +123,17 @@ f_internal u16 getGlyphIndex
 (
     cmap *cmap,
     u64  i,
-    char c
+    u16  c
 ){
     if(!cmap->idRangeOffset[i])
     {
-        return (u16)(cmap->idDelta[i] + c % U16MAX);
+        return (u16)(cmap->idDelta[i] + c);
     }
 
-    u08 *glyphIndexAddr = (u08*)(cmap->idRangeOffset[i] + 2 *
+    u16 fixedIdRangeOffset  = cmap->idRangeOffset[i] >> 8;
+    fixedIdRangeOffset     |= cmap->idRangeOffset[i] & 0xFF;
+
+    u08 *glyphIndexAddr = (u08*)(fixedIdRangeOffset + 2 *
                                 (c - cmap->startCode[i]) + &cmap->idRangeOffset[i]);
 
     u16 glyphIndex  = (u16)(*glyphIndexAddr++ << 8);
@@ -138,11 +141,9 @@ f_internal u16 getGlyphIndex
 
     if(glyphIndex)
     {
-        glyphIndex += cmap->idDelta[i] % U16MAX;
+        glyphIndex += cmap->idDelta[i];
     }
 
-    // TESTING: is this right?
-    // return (u16)(glyphIndex + cmap->idDelta[i] % U16MAX);
     return glyphIndex;
 }
 
@@ -184,6 +185,10 @@ f_internal void readCmapFormat_4
               font->cmap->rangeShift);
 
     font->cmap->endCode = (u16*)(&subtableData[(*subIndex)]);
+    for(u08 i = 0; i < 10; ++i)
+    {
+        FF_TRACE("end code %"PRIu8": %"PRIu16, i, font->cmap->endCode[i]);
+    }
     (*subIndex) += segCount * 2;
 
     u16 reservedPad  = (u16)(subtableData[(*subIndex)++] << 8);
@@ -193,6 +198,10 @@ f_internal void readCmapFormat_4
     FF_ASSERT(!reservedPad, "reservedPad in cmap subtable format 4 needs to be 0.");
 
     font->cmap->startCode = (u16*)(&subtableData[(*subIndex)]);
+    for(u08 i = 0; i < 10; ++i)
+    {
+        FF_TRACE("start code %"PRIu8": %"PRIu16, i, font->cmap->startCode[i]);
+    }
     (*subIndex) += segCount * 2;
 
     font->cmap->idDelta = (i16*)(&subtableData[(*subIndex)]);
@@ -1030,10 +1039,6 @@ int main
     }
 
     // CURRENT: somehow make sense of the glyph index array?
-
-    // TODO: push all 'to find' letters on here, then iterate on it as a stack in the
-    // loop
-
     char *alphabet = 0;
     for(u16 i = 0; i < 26; ++i)
     {
@@ -1046,53 +1051,59 @@ int main
     u16 segCount   = font.cmap->segCountX2 / 2;
     for(u16 i = 0; i < segCount; ++i)
     {
-        for(u16 j = 0; j < pdArrSize(alphabet); ++j)
+        u16 j = 0;
+        while(j < pdArrSize(alphabet))
         {
-            char curr = alphabet[j];
+            u16 curr = (u16)alphabet[j];
             if(startCode[i] <= curr && endCode[i] >= curr)
             {
-                u16 glyphIndex  = getGlyphIndex(font.cmap, i, curr);
+                u16 glyph = getGlyphIndex(font.cmap, i, curr);
 
-                FF_ASSERT(glyphIndex < font.maxp->numGlyphs, "glyphIndex of %"PRIu16
+                FF_ASSERT(glyph < font.maxp->numGlyphs, "glyphIndex of %"PRIu16
                           " is outside the valid range (< %"PRIu16")",
-                          glyphIndex, font.maxp->numGlyphs);
+                          glyph, font.maxp->numGlyphs);
 
-                u16 numContours = 0;
+                i16 numContours = 0;
                 u32 offset      = 0;
                 u32 offsetNext  = 0;
 
                 if(font.loca->offsets16)
                 {
-                    offset  = font.loca->offsets16[glyphIndex] & 0xFF;
-                    offset |= font.loca->offsets16[glyphIndex] >> 8;
+                    offset  = (font.loca->offsets16[glyph] >> 8)
+                    |   (u16)((font.loca->offsets16[glyph] & 0xFF) << 8);
 
-                    offsetNext  = font.loca->offsets16[glyphIndex + 1] & 0xFF;
-                    offsetNext |= font.loca->offsets16[glyphIndex + 1] >> 8;
+                    offsetNext  = (font.loca->offsets16[glyph + 1] >> 8)
+                    |       (u16)((font.loca->offsets16[glyph + 1] & 0xFF) << 8);
 
                     offset     *= 2;
                     offsetNext *= 2;
                 }
                 else // font.loca->offsets32
                 {
-                    offset  = (font.loca->offsets32[glyphIndex] >> 0)  & 0xFF;
-                    offset |= (font.loca->offsets32[glyphIndex] >> 8)  & 0xFF;
-                    offset |= (font.loca->offsets32[glyphIndex] >> 16) & 0xFF;
-                    offset |= (font.loca->offsets32[glyphIndex] >> 24) & 0xFF;
+                    offset  = ((font.loca->offsets32[glyph] & 0x000000FF) << 24)
+                    |    (u32)((font.loca->offsets32[glyph] & 0x0000FF00) << 8)
+                    |    (u32)((font.loca->offsets32[glyph] & 0x00FF0000) >> 8)
+                    |    (u32)((font.loca->offsets32[glyph] & 0xFF000000) >> 24);
 
-                    offsetNext  = (font.loca->offsets32[glyphIndex + 1] >> 0)  & 0xFF;
-                    offsetNext |= (font.loca->offsets32[glyphIndex + 1] >> 8)  & 0xFF;
-                    offsetNext |= (font.loca->offsets32[glyphIndex + 1] >> 16) & 0xFF;
-                    offsetNext |= (font.loca->offsets32[glyphIndex + 1] >> 24) & 0xFF;
+                    offsetNext = ((font.loca->offsets32[glyph+1] & 0x000000FF) << 24)
+                    |       (u32)((font.loca->offsets32[glyph+1] & 0x0000FF00) << 8)
+                    |       (u32)((font.loca->offsets32[glyph+1] & 0x00FF0000) >> 8)
+                    |       (u32)((font.loca->offsets32[glyph+1] & 0xFF000000) >> 24);
                 }
 
                 FF_ASSERT(offsetNext >= offset, "parser error, offsetNext (%"PRIu32
                           ") cannot be smaller than offset (%"PRIu32").",
                           offsetNext, offset);
 
-                FF_DEBUG("glyphIndex of '%c' is %6"PRIu16". offset: %4"PRIu32
-                         ", length: %4"PRIu32" numContours: %"PRIu16,
-                         curr, glyphIndex, offset, offsetNext - offset, numContours);
+                FF_DEBUG("glyphIndex of '%c' is %3"PRIu16". offset: %5"PRIu32
+                         ", length: %4"PRIu32" numContours: %"PRIi16,
+                         curr, glyph, offset, offsetNext - offset, numContours);
+
                 pdArrRemove(alphabet, j);
+            }
+            else
+            {
+                ++j;
             }
         }
     }
