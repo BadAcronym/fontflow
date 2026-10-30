@@ -120,31 +120,34 @@ f_internal void readCmapFormat_2
     FF_WARN("cmap subtableFormat 2 unimplemented.");
 }
 
-// TODO: maybe look at this, is my glyph index addressing off?
-// https://github.com/sphaerophoria/font-rendering/blob/master/src/main.zig#L130-L152
+// FIXME: I think something is still wrong here :(
 f_internal u16 getGlyphIndex
 (
     cmap *cmap,
     u64  i,
-    u16  c
+    u16  c,
+    u16  fixedStartCode
 ){
-    if(!cmap->idRangeOffset[i])
-    {
-        return (u16)(cmap->idDelta[i] + c);
-    }
+    i16 fixedIdDelta        = cmap->idDelta[i] >> 8;
+    fixedIdDelta           |= (i16)((cmap->idDelta[i] & 0xFF) << 8);
 
     u16 fixedIdRangeOffset  = cmap->idRangeOffset[i] >> 8;
-    fixedIdRangeOffset     |= cmap->idRangeOffset[i] & 0xFF;
+    fixedIdRangeOffset     |= (u16)((cmap->idRangeOffset[i] & 0xFF) << 8);
+
+    if(!fixedIdRangeOffset)
+    {
+        return (u16)(fixedIdDelta + c);
+    }
 
     u08 *glyphIndexAddr = (u08*)(fixedIdRangeOffset + 2 *
-                                (c - cmap->startCode[i]) + &cmap->idRangeOffset[i]);
+                                (c - fixedStartCode) + &cmap->idRangeOffset[i]);
 
     u16 glyphIndex  = (u16)(*glyphIndexAddr++ << 8);
     glyphIndex     |= *glyphIndexAddr;
 
     if(glyphIndex)
     {
-        glyphIndex += cmap->idDelta[i];
+        glyphIndex += fixedIdDelta;
     }
 
     return glyphIndex;
@@ -158,7 +161,7 @@ f_internal void readCmapFormat_4
     u08 *subtableData = info->subtableData;
     u64 *subIndex     = &info->subIndex;
 
-    FF_TRACE("\nreading cmap format 4.");
+    FF_TRACE("\nreading cmap format 4 @ %p.", subtableData);
 
     font->cmap->segCountX2  = (u16)(subtableData[(*subIndex)++] << 8);
     font->cmap->segCountX2 |= subtableData[(*subIndex)++];
@@ -297,9 +300,9 @@ f_internal void readTable_cmap
         FF_TRACE("platformSpecificID:    %"PRIu16, info.platformSpecificID);
 
         u32 mappingOffset = 0;
-        for(u08 i = 0; i < 4; ++i)
+        for(u08 j = 0; j < 4; ++j)
         {
-            mappingOffset |= (u32)cmapData[index++] << (3 - i) * 8;
+            mappingOffset |= (u32)cmapData[index++] << (3 - j) * 8;
         }
         FF_TRACE("mappingOffset:         %"PRIu32, mappingOffset);
 
@@ -312,6 +315,7 @@ f_internal void readTable_cmap
         info.subtableData    = cmapData + mappingOffset;
         info.subtableFormat  = (u16)(info.subtableData[info.subIndex++] << 8);
         info.subtableFormat |= info.subtableData[info.subIndex++];
+        FF_TRACE("subtableData:          %p", info.subtableData);
         FF_TRACE("subtableFormat:        %"PRIu16, info.subtableFormat);
 
         pdArrPush(infos, info);
@@ -447,6 +451,8 @@ chosen:
             return;
         }
     }
+
+    pdArrFree(infos);
 }
 
 f_internal void readTable_glyf
@@ -721,6 +727,14 @@ f_internal glyf readGlyph
     u32 start,
     u32 end
 ){
+    if(start == end)
+    {
+        return (glyf){0};
+    }
+
+    FF_ASSERT(start <= end, "start cannot be bigger than end: %"PRIu32" > %"PRIu32,
+              start, end)
+
     glyf glyf = {0};
 
     glyf.numberOfContours  = (i16)(glyphData[start++] << 8);
@@ -735,7 +749,8 @@ f_internal glyf readGlyph
     glyf.yMax = (i16)(glyphData[start++] << 8);
     glyf.yMax |= glyphData[start++];
 
-    FF_ASSERT(start <= end, "start cannot be bigger than end.")
+    FF_ASSERT(start <= end, "current index is bigger than end, read too many bytes: %"
+              PRIu32" > %"PRIu32, start, end)
 
     return glyf;
 }
@@ -819,27 +834,27 @@ int main
         table.tag.data = tagBuf;
         table.tag.size = 4;
 
-        for(u08 i = 0; i < 4; ++i)
+        for(u08 j = 0; j < 4; ++j)
         {
-            tagBuf[i] = (char)fileBuf[index++];
+            tagBuf[j] = (char)fileBuf[index++];
         }
         FF_DEBUG("\nread tag: '"PRI_SV"'", ARG_SV(table.tag));
 
-        for(u08 i = 0; i < 4; ++i)
+        for(u08 j = 0; j < 4; ++j)
         {
-            table.checksum |= (u32)(fileBuf[index++]) << (3 - i) * 8;
+            table.checksum |= (u32)(fileBuf[index++]) << (3 - j) * 8;
         }
         FF_TRACE("read table checksum:   0x%"PRIX32, table.checksum);
 
-        for(u08 i = 0; i < 4; ++i)
+        for(u08 j = 0; j < 4; ++j)
         {
-            table.offset |= (u32)(fileBuf[index++]) << (3 - i) * 8;
+            table.offset |= (u32)(fileBuf[index++]) << (3 - j) * 8;
         }
         FF_TRACE("read table offset:     %"PRIu32, table.offset);
 
-        for(u08 i = 0; i < 4; ++i)
+        for(u08 j = 0; j < 4; ++j)
         {
-            table.length |= (u32)(fileBuf[index++]) << (3 - i) * 8;
+            table.length |= (u32)(fileBuf[index++]) << (3 - j) * 8;
         }
         FF_TRACE("read table length:     %"PRIu32, table.length);
 
@@ -1086,10 +1101,15 @@ int main
         u16 j = 0;
         while(j < pdArrSize(alphabet))
         {
+            u16 fixedStartCode  = (startCode[i] >> 8);
+            fixedStartCode     |= (startCode[i] & 0xFF) << 8;
+            u16 fixedEndCode    = (endCode[i] >> 8);
+            fixedEndCode       |= (endCode[i] & 0xFF) << 8;
+
             u16 curr = (u16)alphabet[j];
-            if(startCode[i] <= curr && endCode[i] >= curr)
+            if(fixedStartCode <= curr && fixedEndCode >= curr)
             {
-                u16 glyph = getGlyphIndex(font.cmap, i, curr);
+                u16 glyph = getGlyphIndex(font.cmap, i, curr, fixedStartCode);
 
                 FF_ASSERT(glyph < font.maxp->numGlyphs, "glyphIndex of %"PRIu16
                           " is outside the valid range (< %"PRIu16")",
@@ -1111,15 +1131,15 @@ int main
                 }
                 else // font.loca32
                 {
-                    offset  = ((font.loca32[glyph] & 0x000000FF) << 24)
-                    |    (u32)((font.loca32[glyph] & 0x0000FF00) << 8)
-                    |    (u32)((font.loca32[glyph] & 0x00FF0000) >> 8)
-                    |    (u32)((font.loca32[glyph] & 0xFF000000) >> 24);
+                    offset  = ((font.loca32[glyph]) >> 24)
+                    |    (u32)((font.loca32[glyph] & 0xFF0000) << 8)
+                    |    (u32)((font.loca32[glyph] & 0x00FF00) << 16)
+                    |    (u32)((font.loca32[glyph] & 0x0000FF) << 24);
 
-                    offsetNext = ((font.loca32[glyph + 1] & 0x000000FF) << 24)
-                    |       (u32)((font.loca32[glyph + 1] & 0x0000FF00) << 8)
-                    |       (u32)((font.loca32[glyph + 1] & 0x00FF0000) >> 8)
-                    |       (u32)((font.loca32[glyph + 1] & 0xFF000000) >> 24);
+                    offsetNext = ((font.loca32[glyph + 1]) >> 24)
+                    |       (u32)((font.loca32[glyph + 1] & 0xFF0000) << 8)
+                    |       (u32)((font.loca32[glyph + 1] & 0x00FF00) << 16)
+                    |       (u32)((font.loca32[glyph + 1] & 0x0000FF) << 24);
                 }
 
                 FF_ASSERT(offsetNext >= offset, "parser error, offsetNext (%"PRIu32
