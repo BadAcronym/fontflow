@@ -128,6 +128,24 @@ typedef struct cmap
 }
 cmap;
 
+typedef struct glyf
+{
+    i16 numberOfContours;
+    i16 xMin;
+    i16 yMin;
+    i16 xMax;
+    i16 yMax;
+    u16 *endPtsOfContours;
+    u16 instructionLength;
+    u08 *instructions;
+    u08 *flags;
+    u08 *xCoordinates8;
+    u16 *xCoordinates16;
+    u08 *yCoordinates8;
+    u16 *yCoordinates16;
+}
+glyf;
+
 typedef struct head
 {
     u16 majorVersion;
@@ -150,13 +168,6 @@ typedef struct head
     i16 glyphDataFormat;
 }
 head;
-
-typedef struct loca
-{
-    u16 *offsets16;
-    u32 *offsets32;
-}
-loca;
 
 typedef struct maxp
 {
@@ -182,8 +193,10 @@ typedef struct FontData
 {
     u08  *data;
     cmap *cmap;
+    u08  *glyfData;
     head *head;
-    loca *loca;
+    u16  *loca16;
+    u32  *loca32;
     maxp *maxp;
 }
 FontData;

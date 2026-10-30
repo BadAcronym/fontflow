@@ -6,7 +6,7 @@
 
 #include <inttypes.h>
 
-#define FONT_PATH "fonts/notosansgothic/NotoSansGothic-Regular.ttf"
+#define FONT_PATH "fonts/dejavu/DejaVuSans.ttf"
 
 s_global StringView GDEFIdent = { .data = "GDEF", .size = 4 };
 s_global StringView GPOSIdent = { .data = "GPOS", .size = 4 };
@@ -25,6 +25,7 @@ s_global StringView cvtIdent  = { .data = "cvt ", .size = 4 };
 s_global StringView EBSCIdent = { .data = "EBSC", .size = 4 };
 s_global StringView fdscIdent = { .data = "fdsc", .size = 4 };
 s_global StringView featIdent = { .data = "feat", .size = 4 };
+s_global StringView FFTMIdent = { .data = "FFTM", .size = 4 };
 s_global StringView fmtxIdent = { .data = "fmtx", .size = 4 };
 s_global StringView fondIdent = { .data = "fond", .size = 4 };
 s_global StringView fpgmIdent = { .data = "fpgm", .size = 4 };
@@ -45,6 +46,7 @@ s_global StringView kerxIdent = { .data = "kerx", .size = 4 };
 s_global StringView lcarIdent = { .data = "lcar", .size = 4 };
 s_global StringView locaIdent = { .data = "loca", .size = 4 };
 s_global StringView ltagIdent = { .data = "ltag", .size = 4 };
+s_global StringView MATHIdent = { .data = "MATH", .size = 4 };
 s_global StringView maxpIdent = { .data = "maxp", .size = 4 };
 s_global StringView metaIdent = { .data = "meta", .size = 4 };
 s_global StringView mortIdent = { .data = "mort", .size = 4 };
@@ -71,10 +73,11 @@ f_internal bool verifyIDs
 
     if(platformID == FF_PLATFORM_ID_UNICODE)
     {
-        if(platformSpecificID > 6)
+        if(platformSpecificID > 6 && platformSpecificID != 10)
         {
             FF_ERROR("platform ID is 0 (unicode) but platformSpecificID is %"PRIu16
-                     ", which is not a valid identifier (0 - 6).", platformSpecificID);
+                     ", which is not a valid identifier (0 - 6 | 10).",
+                     platformSpecificID);
             return false;
         }
     }
@@ -185,10 +188,6 @@ f_internal void readCmapFormat_4
               font->cmap->rangeShift);
 
     font->cmap->endCode = (u16*)(&subtableData[(*subIndex)]);
-    for(u08 i = 0; i < 10; ++i)
-    {
-        FF_TRACE("end code %"PRIu8": %"PRIu16, i, font->cmap->endCode[i]);
-    }
     (*subIndex) += segCount * 2;
 
     u16 reservedPad  = (u16)(subtableData[(*subIndex)++] << 8);
@@ -198,10 +197,6 @@ f_internal void readCmapFormat_4
     FF_ASSERT(!reservedPad, "reservedPad in cmap subtable format 4 needs to be 0.");
 
     font->cmap->startCode = (u16*)(&subtableData[(*subIndex)]);
-    for(u08 i = 0; i < 10; ++i)
-    {
-        FF_TRACE("start code %"PRIu8": %"PRIu16, i, font->cmap->startCode[i]);
-    }
     (*subIndex) += segCount * 2;
 
     font->cmap->idDelta = (i16*)(&subtableData[(*subIndex)]);
@@ -459,9 +454,7 @@ f_internal void readTable_glyf
     FontData   *font,
     TableEntry *entry
 ){
-    //
-    FF_WARN("required table 'glyf' not implemented.");
-    //
+    font->glyfData = font->data + entry->offset;
 }
 
 f_internal void readTable_head
@@ -602,12 +595,12 @@ f_internal void readTable_loca
 
     if(font->head->indexToLocFormat == 1)
     {
-        font->loca->offsets32 = (u32*)locaData;
+        font->loca32 = (u32*)locaData;
         FF_TRACE("read offset size:      32");
     }
     else
     {
-        font->loca->offsets16 = (u16*)locaData;
+        font->loca16 = (u16*)locaData;
         FF_TRACE("read offset size:      16");
     }
 }
@@ -722,6 +715,31 @@ f_internal void readTable_post
     //
 }
 
+f_internal glyf readGlyph
+(
+    u08 *glyphData,
+    u32 start,
+    u32 end
+){
+    glyf glyf = {0};
+
+    glyf.numberOfContours  = (i16)(glyphData[start++] << 8);
+    glyf.numberOfContours |= glyphData[start++];
+
+    glyf.xMin = (i16)(glyphData[start++] << 8);
+    glyf.xMin |= glyphData[start++];
+    glyf.yMin = (i16)(glyphData[start++] << 8);
+    glyf.yMin |= glyphData[start++];
+    glyf.xMax = (i16)(glyphData[start++] << 8);
+    glyf.xMax |= glyphData[start++];
+    glyf.yMax = (i16)(glyphData[start++] << 8);
+    glyf.yMax |= glyphData[start++];
+
+    FF_ASSERT(start <= end, "start cannot be bigger than end.")
+
+    return glyf;
+}
+
 int main
 (
     void
@@ -744,17 +762,19 @@ int main
         return 2;
     }
 
-    cmap cmap = {0};
-    head head = {0};
-    loca loca = {0};
-    maxp maxp = {0};
+    cmap cmap   = {0};
+    head head   = {0};
+    u16  loca16 = {0};
+    u32  loca32 = {0};
+    maxp maxp   = {0};
 
     FontData font = {0};
-    font.data = fileBuf;
-    font.cmap = &cmap;
-    font.head = &head;
-    font.loca = &loca;
-    font.maxp = &maxp;
+    font.data   = fileBuf;
+    font.cmap   = &cmap;
+    font.head   = &head;
+    font.loca16 = &loca16;
+    font.loca32 = &loca32;
+    font.maxp   = &maxp;
 
     if(fread(fileBuf, 1, filesize, file) != filesize)
     {
@@ -887,6 +907,10 @@ int main
         {
             // ignore its data for now
         }
+        else if(pdSVSame(table.tag, FFTMIdent))
+        {
+            // ignore its data for now
+        }
         else if(pdSVSame(table.tag, fmtxIdent))
         {
             // ignore its data for now
@@ -967,6 +991,10 @@ int main
         {
             // ignore its data for now
         }
+        else if(pdSVSame(table.tag, MATHIdent))
+        {
+            // ignore its data for now
+        }
         else if(pdSVSame(table.tag, maxpIdent))
         {
             readTable_maxp(&font, &table);
@@ -1044,6 +1072,10 @@ int main
     {
         pdArrPush(alphabet, (char)('A' + i));
     }
+    for(u16 i = 0; i < 26; ++i)
+    {
+        pdArrPush(alphabet, (char)('a' + i));
+    }
 
     FF_TRACE("");
     u16 *startCode = font.cmap->startCode;
@@ -1063,41 +1095,50 @@ int main
                           " is outside the valid range (< %"PRIu16")",
                           glyph, font.maxp->numGlyphs);
 
-                i16 numContours = 0;
                 u32 offset      = 0;
                 u32 offsetNext  = 0;
 
-                if(font.loca->offsets16)
+                if(font.loca16)
                 {
-                    offset  = (font.loca->offsets16[glyph] >> 8)
-                    |   (u16)((font.loca->offsets16[glyph] & 0xFF) << 8);
+                    offset  = (font.loca16[glyph] >> 8)
+                    |   (u16)((font.loca16[glyph] & 0xFF) << 8);
 
-                    offsetNext  = (font.loca->offsets16[glyph + 1] >> 8)
-                    |       (u16)((font.loca->offsets16[glyph + 1] & 0xFF) << 8);
+                    offsetNext  = (font.loca16[glyph + 1] >> 8)
+                    |       (u16)((font.loca16[glyph + 1] & 0xFF) << 8);
 
                     offset     *= 2;
                     offsetNext *= 2;
                 }
-                else // font.loca->offsets32
+                else // font.loca32
                 {
-                    offset  = ((font.loca->offsets32[glyph] & 0x000000FF) << 24)
-                    |    (u32)((font.loca->offsets32[glyph] & 0x0000FF00) << 8)
-                    |    (u32)((font.loca->offsets32[glyph] & 0x00FF0000) >> 8)
-                    |    (u32)((font.loca->offsets32[glyph] & 0xFF000000) >> 24);
+                    offset  = ((font.loca32[glyph] & 0x000000FF) << 24)
+                    |    (u32)((font.loca32[glyph] & 0x0000FF00) << 8)
+                    |    (u32)((font.loca32[glyph] & 0x00FF0000) >> 8)
+                    |    (u32)((font.loca32[glyph] & 0xFF000000) >> 24);
 
-                    offsetNext = ((font.loca->offsets32[glyph+1] & 0x000000FF) << 24)
-                    |       (u32)((font.loca->offsets32[glyph+1] & 0x0000FF00) << 8)
-                    |       (u32)((font.loca->offsets32[glyph+1] & 0x00FF0000) >> 8)
-                    |       (u32)((font.loca->offsets32[glyph+1] & 0xFF000000) >> 24);
+                    offsetNext = ((font.loca32[glyph + 1] & 0x000000FF) << 24)
+                    |       (u32)((font.loca32[glyph + 1] & 0x0000FF00) << 8)
+                    |       (u32)((font.loca32[glyph + 1] & 0x00FF0000) >> 8)
+                    |       (u32)((font.loca32[glyph + 1] & 0xFF000000) >> 24);
                 }
 
                 FF_ASSERT(offsetNext >= offset, "parser error, offsetNext (%"PRIu32
                           ") cannot be smaller than offset (%"PRIu32").",
                           offsetNext, offset);
 
+                glyf glyf = readGlyph(font.glyfData, offset, offsetNext);
+
                 FF_DEBUG("glyphIndex of '%c' is %3"PRIu16". offset: %5"PRIu32
-                         ", length: %4"PRIu32" numContours: %"PRIi16,
-                         curr, glyph, offset, offsetNext - offset, numContours);
+                         ", length: %4"PRIu32" contours: %2"PRIi16,
+                         curr, glyph, offset, offsetNext - offset,
+                         glyf.numberOfContours);
+
+                if(glyf.numberOfContours == -1)
+                {
+                    FF_DEBUG("xMin: %3"PRIi16", yMin: %3"PRIi16", xMax: %3"PRIi16
+                             ", yMax: %3"PRIi16,
+                             glyf.xMin, glyf.yMin, glyf.xMax, glyf.yMax);
+                }
 
                 pdArrRemove(alphabet, j);
             }
