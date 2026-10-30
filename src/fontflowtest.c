@@ -620,9 +620,9 @@ f_internal void readTable_maxp
     FF_TRACE("maxp version:          %"PRIx16".%"PRIx16,
              version.before, version.after);
 
-    u16 numGlyphs  = (u16)(maxpData[index++] << 8);
-    numGlyphs     |= (u16)(maxpData[index++]);
-    FF_TRACE("numGlyphs:             %"PRIu16, numGlyphs);
+    font->maxp->numGlyphs  = (u16)(maxpData[index++] << 8);
+    font->maxp->numGlyphs |= (u16)(maxpData[index++]);
+    FF_TRACE("numGlyphs:             %"PRIu16, font->maxp->numGlyphs);
 
     // if version is 0.5 (openType fonts with 'CFF ' table, we need to abort
     // reading past numGlyphs, because that's all that this table has.
@@ -1030,18 +1030,33 @@ int main
     }
 
     // CURRENT: somehow make sense of the glyph index array?
+
+    // TODO: push all 'to find' letters on here, then iterate on it as a stack in the
+    // loop
+
+    char *alphabet = 0;
+    for(u16 i = 0; i < 26; ++i)
+    {
+        pdArrPush(alphabet, (char)('A' + i));
+    }
+
     FF_TRACE("");
     u16 *startCode = font.cmap->startCode;
     u16 *endCode   = font.cmap->endCode;
     u16 segCount   = font.cmap->segCountX2 / 2;
     for(u16 i = 0; i < segCount; ++i)
     {
-        for(u16 j = 0; j < 26; ++j)
+        for(u16 j = 0; j < pdArrSize(alphabet); ++j)
         {
-            char curr = (char)('A' + j);
+            char curr = alphabet[j];
             if(startCode[i] <= curr && endCode[i] >= curr)
             {
                 u16 glyphIndex  = getGlyphIndex(font.cmap, i, curr);
+
+                FF_ASSERT(glyphIndex < font.maxp->numGlyphs, "glyphIndex of %"PRIu16
+                          " is outside the valid range (< %"PRIu16")",
+                          glyphIndex, font.maxp->numGlyphs);
+
                 u16 numContours = 0;
                 u32 offset      = 0;
                 u32 offsetNext  = 0;
@@ -1077,6 +1092,7 @@ int main
                 FF_DEBUG("glyphIndex of '%c' is %6"PRIu16". offset: %4"PRIu32
                          ", length: %4"PRIu32" numContours: %"PRIu16,
                          curr, glyphIndex, offset, offsetNext - offset, numContours);
+                pdArrRemove(alphabet, j);
             }
         }
     }
