@@ -787,8 +787,6 @@ int main
     font.data   = fileBuf;
     font.cmap   = &cmap;
     font.head   = &head;
-    font.loca16 = &loca16;
-    font.loca32 = &loca32;
     font.maxp   = &maxp;
 
     if(fread(fileBuf, 1, filesize, file) != filesize)
@@ -1131,15 +1129,15 @@ int main
                 }
                 else // font.loca32
                 {
-                    offset  = ((font.loca32[glyph]) >> 24)
-                    |    (u32)((font.loca32[glyph] & 0xFF0000) << 8)
-                    |    (u32)((font.loca32[glyph] & 0x00FF00) << 16)
-                    |    (u32)((font.loca32[glyph] & 0x0000FF) << 24);
+                    offset  = ((font.loca32[glyph] & 0xFF000000) >> 24)
+                    |    (u32)((font.loca32[glyph] & 0x00FF0000) >> 8)
+                    |    (u32)((font.loca32[glyph] & 0x0000FF00) << 8)
+                    |    (u32)((font.loca32[glyph] & 0x000000FF) << 24);
 
-                    offsetNext = ((font.loca32[glyph + 1]) >> 24)
-                    |       (u32)((font.loca32[glyph + 1] & 0xFF0000) << 8)
-                    |       (u32)((font.loca32[glyph + 1] & 0x00FF00) << 16)
-                    |       (u32)((font.loca32[glyph + 1] & 0x0000FF) << 24);
+                    offsetNext  = ((font.loca32[glyph + 1] & 0xFF000000) >> 24)
+                    |        (u32)((font.loca32[glyph + 1] & 0x00FF0000) >> 8)
+                    |        (u32)((font.loca32[glyph + 1] & 0x0000FF00) << 8)
+                    |        (u32)((font.loca32[glyph + 1] & 0x000000FF) << 24);
                 }
 
                 FF_ASSERT(offsetNext >= offset, "parser error, offsetNext (%"PRIu32
