@@ -735,22 +735,50 @@ f_internal glyf readGlyph
     FF_ASSERT(start <= end, "start cannot be bigger than end: %"PRIu32" > %"PRIu32,
               start, end)
 
+    FF_ASSERT(end - start > 10, "can't read less than 10 bytes (%"PRIu32") for header.",
+              end - start)
+
     glyf glyf = {0};
 
     glyf.numberOfContours  = (i16)(glyphData[start++] << 8);
     glyf.numberOfContours |= glyphData[start++];
 
-    glyf.xMin = (i16)(glyphData[start++] << 8);
+    glyf.xMin  = (i16)(glyphData[start++] << 8);
     glyf.xMin |= glyphData[start++];
-    glyf.yMin = (i16)(glyphData[start++] << 8);
+    glyf.yMin  = (i16)(glyphData[start++] << 8);
     glyf.yMin |= glyphData[start++];
-    glyf.xMax = (i16)(glyphData[start++] << 8);
+    glyf.xMax  = (i16)(glyphData[start++] << 8);
     glyf.xMax |= glyphData[start++];
-    glyf.yMax = (i16)(glyphData[start++] << 8);
+    glyf.yMax  = (i16)(glyphData[start++] << 8);
     glyf.yMax |= glyphData[start++];
 
-    FF_ASSERT(start <= end, "current index is bigger than end, read too many bytes: %"
-              PRIu32" > %"PRIu32, start, end)
+    if(start >= end)
+    {
+        return glyf;
+    }
+
+    glyf.endPtsOfContours = (u16*)&glyphData[start];
+    start = start + (u32)glyf.numberOfContours;
+
+    glyf.instructionLength  = (u16)(glyphData[start++] << 8);
+    glyf.instructionLength |= glyphData[start++];
+
+    glyf.instructions = &glyphData[start];
+    start += glyf.instructionLength;
+
+    // FIX: we probably need to check more carefully here.
+    if(start >= end)
+    {
+        return glyf;
+    }
+
+    // read more
+    //
+    // u08 *flags;
+    // u08 *xCoordinates8;
+    // u16 *xCoordinates16;
+    // u08 *yCoordinates8;
+    // u16 *yCoordinates16;
 
     return glyf;
 }
@@ -1147,9 +1175,8 @@ int main
                 glyf glyf = readGlyph(font.glyfData, offset, offsetNext);
 
                 FF_DEBUG("glyphIndex of '%c' is %3"PRIu16". offset: %5"PRIu32
-                         ", length: %4"PRIu32" contours: %2"PRIi16,
-                         curr, glyph, offset, offsetNext - offset,
-                         glyf.numberOfContours);
+                         ", contours: %2"PRIi16,
+                         curr, glyph, offset, glyf.numberOfContours);
 
                 if(glyf.numberOfContours == -1)
                 {
