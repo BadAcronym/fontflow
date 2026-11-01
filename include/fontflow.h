@@ -266,6 +266,18 @@ extern void readTable_cmap
     TableEntry *entry
 );
 
+extern void readTable_glyf
+(
+    FontData   *font,
+    TableEntry *entry
+);
+
+extern glyf readGlyph
+(
+    FontData *font,
+    u32      glyph
+);
+
 #define FF_PLATFORM_ID_UNICODE   0
 #define FF_PLATFORM_ID_MACINTOSH 1
 #define FF_PLATFORM_ID_MICROSOFT 3
