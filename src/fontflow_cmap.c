@@ -45,7 +45,7 @@ f_internal bool verifyIDs
     }
     else if(platformID == FF_PLATFORM_ID_MACINTOSH)
     {
-        FF_DEBUG("TODO: verify Macintosh QuickDraw script code");
+        FF_DEBUG("unimplemented: verify Macintosh QuickDraw script code?");
     }
     else if(platformID == FF_PLATFORM_ID_MICROSOFT)
     {

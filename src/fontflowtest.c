@@ -320,7 +320,7 @@ f_internal glyf readGlyph
     if(font->loca16)
     {
         start = (font->loca16[glyph] >> 8)
-        |  (u16)((font->loca16[glyph] & 0xFF) << 8);
+        | (u16)((font->loca16[glyph] & 0xFF) << 8);
 
         end   = (font->loca16[glyph + 1] >> 8)
         | (u16)((font->loca16[glyph + 1] & 0xFF) << 8);
@@ -331,9 +331,9 @@ f_internal glyf readGlyph
     else // font->loca32
     {
         start = ((font->loca32[glyph] & 0xFF000000) >> 24)
-        |   (u32)((font->loca32[glyph] & 0x00FF0000) >> 8)
-        |   (u32)((font->loca32[glyph] & 0x0000FF00) << 8)
-        |   (u32)((font->loca32[glyph] & 0x000000FF) << 24);
+        |  (u32)((font->loca32[glyph] & 0x00FF0000) >> 8)
+        |  (u32)((font->loca32[glyph] & 0x0000FF00) << 8)
+        |  (u32)((font->loca32[glyph] & 0x000000FF) << 24);
 
         end   = ((font->loca32[glyph + 1] & 0xFF000000) >> 24)
         |  (u32)((font->loca32[glyph + 1] & 0x00FF0000) >> 8)
@@ -389,12 +389,6 @@ f_internal glyf readGlyph
         glyf.instructions = &glyphData[start];
         start += glyf.instructionLength;
     }
-
-    // FIX: we probably need to check more carefully here.
-    // if(start >= end)
-    // {
-    //     return glyf;
-    // }
 
     u16 numberOfPoints  = (glyf.endPtsOfContours[glyf.numberOfContours-1] >> 8);
     numberOfPoints     |= (glyf.endPtsOfContours[glyf.numberOfContours-1] & 0xFF) << 8;
@@ -749,7 +743,6 @@ int main
         }
     }
 
-    // CURRENT: somehow make sense of the glyph index array?
     char *alphabet = 0;
     for(u16 i = 0; i < 26; ++i)
     {
