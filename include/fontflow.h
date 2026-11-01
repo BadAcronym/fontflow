@@ -7,6 +7,9 @@
 #define f_internal static
 #define s_global   static
 
+#define FF_FLAG_REPEAT   0x08
+#define FF_FLAG_RESERVED 0x80
+
 typedef struct FFL
 {
     i16 before;
