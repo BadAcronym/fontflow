@@ -7,8 +7,14 @@
 #define f_internal static
 #define s_global   static
 
-#define FF_FLAG_REPEAT   0x08
-#define FF_FLAG_RESERVED 0x80
+#define FF_FLAG_ON_CURVE_POINT 0x01
+#define FF_FLAG_X_SHORT_VECTOR 0x02
+#define FF_FLAG_Y_SHORT_VECTOR 0x04
+#define FF_FLAG_REPEAT         0x08
+#define FF_FLAG_X_IS_SAME_POSX 0x10
+#define FF_FLAG_Y_IS_SAME_POSY 0x20
+#define FF_FLAG_OVERLAP_SIMPLE 0x40
+#define FF_FLAG_RESERVED       0x80
 
 s_global StringView GDEFIdent = { .data = "GDEF", .size = 4 };
 s_global StringView GPOSIdent = { .data = "GPOS", .size = 4 };
@@ -198,10 +204,8 @@ typedef struct glyf
     u16 instructionLength;
     u08 *instructions;
     u08 *flags;
-    u08 *xCoordinates8;
-    u16 *xCoordinates16;
-    u08 *yCoordinates8;
-    u16 *yCoordinates16;
+    i16 *xCoordinates;
+    i16 *yCoordinates;
 }
 glyf;
 

@@ -47,9 +47,8 @@ glyf readGlyph
         |  (u32)((font->loca32[glyph + 1] & 0x000000FF) << 24);
     }
 
-    FF_ASSERT(end >= start, "parser error, offsetNext (%"PRIu32
-              ") cannot be smaller than offset (%"PRIu32").",
-              end, start);
+    FF_ASSERT(end >= start, "parser error, offsetNext (%"PRIu32") cannot be smaller "
+              "than offset (%"PRIu32").", end, start);
 
     if(start == end)
     {
@@ -99,28 +98,121 @@ glyf readGlyph
     u16 numberOfPoints  = (glyf.endPtsOfContours[glyf.numberOfContours-1] >> 8);
     numberOfPoints     |= (glyf.endPtsOfContours[glyf.numberOfContours-1] & 0xFF) << 8;
 
+    u08 *flags = 0;
+    pdArrReserve(flags, numberOfPoints);
+
     FF_TRACE("number of points: %"PRIu16, numberOfPoints);
     for(u16 i = 0; i < numberOfPoints; ++i)
     {
         u08 flag = glyphData[start++];
         FF_ASSERT((flag & FF_FLAG_RESERVED) == 0, "flag reserved bit needs to be 0.");
 
+        pdArrPush(flags, flag);
+
         if(flag & FF_FLAG_REPEAT)
         {
             u08 repeat = glyphData[start++];
             i += repeat;
+
+            for(u08 j = 0; j < repeat; ++j)
+            {
+                pdArrPush(flags, flag);
+            }
         }
     }
-    // dunno, sometimes it's untrue here
-    // FF_ASSERT(i == numberOfPoints, "must read exactly numberOfPoints flags. read: %"
-    //           PRIu16", expected: %"PRIu16, i, numberOfPoints);
 
-    // read more
-    //
-    // u08 *xCoordinates8;
-    // u16 *xCoordinates16;
-    // u08 *yCoordinates8;
-    // u16 *yCoordinates16;
+    FF_ASSERT(pdArrSize(flags) == numberOfPoints,
+              "must read exactly numberOfPoints flags. read: %"
+              PRIu64", expected: %"PRIu16,
+              pdArrSize(flags), numberOfPoints);
+
+    i16 xCoordPrev = 0;
+    for(u16 i = 0; i < numberOfPoints; ++i)
+    {
+        i16 xCoord = 0;
+        if(flags[i] & FF_FLAG_X_SHORT_VECTOR)
+        {
+            // 1 byte, sign still undetermined
+            xCoord = glyphData[start++];
+
+            if(!(flags[i] & FF_FLAG_X_IS_SAME_POSX))
+            {
+                xCoord *= -1;
+            }
+        }
+        else if(flags[i] & FF_FLAG_X_IS_SAME_POSX)
+        {
+            pdArrPush(glyf.xCoordinates,
+                      glyf.xCoordinates[pdArrSize(glyf.xCoordinates) - 1]);
+            continue;
+        }
+        else
+        {
+            xCoord  = (i16)(glyphData[start++]);
+            xCoord |= (i16)(glyphData[start++] << 8);
+        }
+
+        FF_TRACE("X_SHORT_VECTOR:   %"PRIu8, (flags[i] & FF_FLAG_X_SHORT_VECTOR) != 0);
+        FF_TRACE("X_IS_SAME_POSX:   %"PRIu8, (flags[i] & FF_FLAG_X_IS_SAME_POSX) != 0);
+        FF_TRACE("parsed xCoord:    %"PRIi16, xCoord);
+        FF_TRACE("effective xCoord: %"PRIi16, xCoord + xCoordPrev);
+
+        FF_ASSERT(xCoord + xCoordPrev <= glyf.xMax,
+                  "coordinate (%"PRIi16") cannot be bigger than xMax (%"PRIi16")",
+                  xCoord + xCoordPrev, glyf.xMax);
+
+        FF_ASSERT(xCoord + xCoordPrev >= glyf.xMin,
+                  "coordinate (%"PRIi16") cannot be smaller than xMin (%"PRIi16")",
+                  xCoord + xCoordPrev, glyf.xMin);
+
+        pdArrPush(glyf.xCoordinates, xCoord);
+        xCoordPrev += xCoord;
+    }
+
+    i16 yCoordPrev = 0;
+    for(u16 i = 0; i < numberOfPoints; ++i)
+    {
+        i16 yCoord = 0;
+        if(flags[i] & FF_FLAG_Y_SHORT_VECTOR)
+        {
+            // 1 byte, sign still undetermined
+            yCoord = glyphData[start++];
+
+            if(!(flags[i] & FF_FLAG_Y_IS_SAME_POSY))
+            {
+                yCoord *= -1;
+            }
+        }
+        else if(flags[i] & FF_FLAG_Y_IS_SAME_POSY)
+        {
+            pdArrPush(glyf.yCoordinates,
+                      glyf.yCoordinates[pdArrSize(glyf.yCoordinates) - 1]);
+            continue;
+        }
+        else
+        {
+            yCoord  = (i16)(glyphData[start++]);
+            yCoord |= (i16)(glyphData[start++] << 8);
+        }
+
+        FF_TRACE("Y_SHORT_VECTOR:   %"PRIu8, (flags[i] & FF_FLAG_Y_SHORT_VECTOR) != 0);
+        FF_TRACE("Y_IS_SAME_POSX:   %"PRIu8, (flags[i] & FF_FLAG_Y_IS_SAME_POSY) != 0);
+        FF_TRACE("parsed yCoord:    %"PRIi16, yCoord);
+        FF_TRACE("effective yCoord: %"PRIi16, yCoord + yCoordPrev);
+
+        FF_ASSERT(yCoord + yCoordPrev <= glyf.yMax,
+                  "coordinate (%"PRIi16") cannot be bigger than yMax (%"PRIi16")",
+                  yCoord + yCoordPrev, glyf.yMax);
+
+        FF_ASSERT(yCoord + yCoordPrev >= glyf.yMin,
+                  "coordinate (%"PRIi16") cannot be smaller than yMin (%"PRIi16")",
+                  yCoord + yCoordPrev, glyf.yMin);
+
+        pdArrPush(glyf.yCoordinates, yCoord);
+        yCoordPrev += yCoord;
+    }
+
+    // TODO: assert that we made it to the end as desired
 
     return glyf;
 }
