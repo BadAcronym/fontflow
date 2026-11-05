@@ -16,7 +16,7 @@ void readTable_glyf
 glyf readGlyph
 (
     FontData *font,
-    u32      glyph
+    u32      glyphIndex
 ){
     u32 start = 0;
     u32 end   = 0;
@@ -25,26 +25,26 @@ glyf readGlyph
 
     if(font->loca16)
     {
-        start = (font->loca16[glyph] >> 8)
-        | (u16)((font->loca16[glyph] & 0xFF) << 8);
+        start = (font->loca16[glyphIndex] >> 8)
+        | (u16)((font->loca16[glyphIndex] & 0xFF) << 8);
 
-        end   = (font->loca16[glyph + 1] >> 8)
-        | (u16)((font->loca16[glyph + 1] & 0xFF) << 8);
+        end   = (font->loca16[glyphIndex + 1] >> 8)
+        | (u16)((font->loca16[glyphIndex + 1] & 0xFF) << 8);
 
         start     *= 2;
         end *= 2;
     }
     else // font->loca32
     {
-        start = ((font->loca32[glyph] & 0xFF000000) >> 24)
-        |  (u32)((font->loca32[glyph] & 0x00FF0000) >> 8)
-        |  (u32)((font->loca32[glyph] & 0x0000FF00) << 8)
-        |  (u32)((font->loca32[glyph] & 0x000000FF) << 24);
+        start = ((font->loca32[glyphIndex] & 0xFF000000) >> 24)
+        |  (u32)((font->loca32[glyphIndex] & 0x00FF0000) >> 8)
+        |  (u32)((font->loca32[glyphIndex] & 0x0000FF00) << 8)
+        |  (u32)((font->loca32[glyphIndex] & 0x000000FF) << 24);
 
-        end   = ((font->loca32[glyph + 1] & 0xFF000000) >> 24)
-        |  (u32)((font->loca32[glyph + 1] & 0x00FF0000) >> 8)
-        |  (u32)((font->loca32[glyph + 1] & 0x0000FF00) << 8)
-        |  (u32)((font->loca32[glyph + 1] & 0x000000FF) << 24);
+        end   = ((font->loca32[glyphIndex + 1] & 0xFF000000) >> 24)
+        |  (u32)((font->loca32[glyphIndex + 1] & 0x00FF0000) >> 8)
+        |  (u32)((font->loca32[glyphIndex + 1] & 0x0000FF00) << 8)
+        |  (u32)((font->loca32[glyphIndex + 1] & 0x000000FF) << 24);
     }
 
     FF_ASSERT(end >= start, "parser error, offsetNext (%"PRIu32") cannot be smaller "
@@ -61,48 +61,68 @@ glyf readGlyph
     FF_ASSERT(end - start > 10, "can't read less than 10 bytes (%"PRIu32") for header.",
               end - start)
 
-    glyf glyf = {0};
+    glyf glyph = {0};
 
-    glyf.numberOfContours  = (i16)(glyphData[start++] << 8);
-    glyf.numberOfContours |= glyphData[start++];
+    glyph.numberOfContours  = (i16)(glyphData[start++] << 8);
+    glyph.numberOfContours |= glyphData[start++];
 
-    if(glyf.numberOfContours == -1)
+    if(glyph.numberOfContours == -1)
     {
         FF_ERROR("composite glyphs are unimplemented.");
-        return glyf;
+        return glyph;
     }
 
-    glyf.xMin  = (i16)(glyphData[start++] << 8);
-    glyf.xMin |= glyphData[start++];
-    glyf.yMin  = (i16)(glyphData[start++] << 8);
-    glyf.yMin |= glyphData[start++];
-    glyf.xMax  = (i16)(glyphData[start++] << 8);
-    glyf.xMax |= glyphData[start++];
-    glyf.yMax  = (i16)(glyphData[start++] << 8);
-    glyf.yMax |= glyphData[start++];
+    glyph.xMin  = (i16)(glyphData[start++] << 8);
+    glyph.xMin |= glyphData[start++];
+    glyph.yMin  = (i16)(glyphData[start++] << 8);
+    glyph.yMin |= glyphData[start++];
+    glyph.xMax  = (i16)(glyphData[start++] << 8);
+    glyph.xMax |= glyphData[start++];
+    glyph.yMax  = (i16)(glyphData[start++] << 8);
+    glyph.yMax |= glyphData[start++];
 
     FF_TRACE("offset: %5"PRIu32", contours: %2"PRIi16,
-             start, glyf.numberOfContours);
+             start, glyph.numberOfContours);
 
-    if(start >= end)
+    if(start > end)
     {
-        return glyf;
+        goto error;
     }
 
-    glyf.endPtsOfContours = (u16*)&glyphData[start];
-    start = start + (u32)(glyf.numberOfContours * 2);
+    glyph.endPtsOfContours = (u16*)&glyphData[start];
+    start = start + (u32)(glyph.numberOfContours * 2);
 
-    glyf.instructionLength  = (u16)(glyphData[start++] << 8);
-    glyf.instructionLength |= glyphData[start++];
-
-    if(glyf.instructionLength)
+    if(start > end)
     {
-        glyf.instructions = &glyphData[start];
-        start += glyf.instructionLength;
+        goto error;
     }
 
-    u16 numberOfPoints  = (glyf.endPtsOfContours[glyf.numberOfContours-1] >> 8);
-    numberOfPoints     |= (glyf.endPtsOfContours[glyf.numberOfContours-1] & 0xFF) << 8;
+    if(start > end)
+    {
+        goto error;
+    }
+
+    glyph.instructionLength  = (u16)(glyphData[start++] << 8);
+    glyph.instructionLength |= glyphData[start++];
+
+    if(start > end)
+    {
+        goto error;
+    }
+
+    if(glyph.instructionLength)
+    {
+        glyph.instructions = &glyphData[start];
+        start += glyph.instructionLength;
+    }
+
+    if(start > end)
+    {
+        goto error;
+    }
+
+    u16 numberOfPoints  = (glyph.endPtsOfContours[glyph.numberOfContours-1] >> 8);
+    numberOfPoints     |= (glyph.endPtsOfContours[glyph.numberOfContours-1] & 0xFF) << 8;
     ++numberOfPoints;
 
     u08 *flags = 0;
@@ -110,6 +130,10 @@ glyf readGlyph
 
     for(u16 i = 0; i < numberOfPoints; ++i)
     {
+        if(start > end)
+        {
+            FF_ERROR("read past the end of the glyph.");
+        }
         u08 flag = glyphData[start++];
         FF_ASSERT((flag & FF_FLAG_RESERVED) == 0, "flag reserved bit needs to be 0.");
 
@@ -135,6 +159,10 @@ glyf readGlyph
     i16 xCoordPrev = 0;
     for(u16 i = 0; i < numberOfPoints; ++i)
     {
+        if(start > end)
+        {
+            goto error;
+        }
         i16 xCoord = 0;
         if(flags[i] & FF_FLAG_X_SHORT_VECTOR)
         {
@@ -155,23 +183,25 @@ glyf readGlyph
             xCoord |= (i16)(glyphData[start++]);
         }
 
-        FF_TRACE("xCoord: %"PRIi16, xCoord + xCoordPrev);
-
-        FF_ASSERT(xCoord + xCoordPrev <= glyf.xMax,
+        FF_ASSERT(xCoord + xCoordPrev <= glyph.xMax,
                   "coordinate (%"PRIi16") cannot be bigger than xMax (%"PRIi16")",
-                  xCoord + xCoordPrev, glyf.xMax);
+                  xCoord + xCoordPrev, glyph.xMax);
 
-        FF_ASSERT(xCoord + xCoordPrev >= glyf.xMin,
+        FF_ASSERT(xCoord + xCoordPrev >= glyph.xMin,
                   "coordinate (%"PRIi16") cannot be smaller than xMin (%"PRIi16")",
-                  xCoord + xCoordPrev, glyf.xMin);
+                  xCoord + xCoordPrev, glyph.xMin);
 
-        pdArrPush(glyf.xCoordinates, xCoord + xCoordPrev);
+        pdArrPush(glyph.xCoordinates, xCoord + xCoordPrev);
         xCoordPrev += xCoord;
     }
 
     i16 yCoordPrev = 0;
     for(u16 i = 0; i < numberOfPoints; ++i)
     {
+        if(start > end)
+        {
+            goto error;
+        }
         i16 yCoord = 0;
         if(flags[i] & FF_FLAG_Y_SHORT_VECTOR)
         {
@@ -192,21 +222,34 @@ glyf readGlyph
             yCoord |= (i16)(glyphData[start++]);
         }
 
-        FF_TRACE("yCoord: %"PRIi16, yCoord + yCoordPrev);
-
-        FF_ASSERT(yCoord + yCoordPrev <= glyf.yMax,
+        FF_ASSERT(yCoord + yCoordPrev <= glyph.yMax,
                   "coordinate (%"PRIi16") cannot be bigger than yMax (%"PRIi16")",
-                  yCoord + yCoordPrev, glyf.yMax);
+                  yCoord + yCoordPrev, glyph.yMax);
 
-        FF_ASSERT(yCoord + yCoordPrev >= glyf.yMin,
+        FF_ASSERT(yCoord + yCoordPrev >= glyph.yMin,
                   "coordinate (%"PRIi16") cannot be smaller than yMin (%"PRIi16")",
-                  yCoord + yCoordPrev, glyf.yMin);
+                  yCoord + yCoordPrev, glyph.yMin);
 
-        pdArrPush(glyf.yCoordinates, yCoord + yCoordPrev);
+        pdArrPush(glyph.yCoordinates, yCoord + yCoordPrev);
         yCoordPrev += yCoord;
     }
 
-    // TODO: assert that we made it to the end as desired
+    #ifdef FF_PRI_TRACE
+    for(u16 i = 0; i < numberOfPoints; ++i)
+    {
+        FF_TRACE("point: (%"PRIi16", %"PRIi16")",
+                 glyph.xCoordinates[i], glyph.yCoordinates[i]);
+    }
+    #endif
 
-    return glyf;
+    if(start > end)
+    {
+        goto error;
+    }
+
+    return glyph;
+
+error:
+    FF_ERROR("read past the end of the glyph.");
+    return (glyf){0};
 }
