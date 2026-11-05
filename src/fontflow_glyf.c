@@ -97,11 +97,11 @@ glyf readGlyph
 
     u16 numberOfPoints  = (glyf.endPtsOfContours[glyf.numberOfContours-1] >> 8);
     numberOfPoints     |= (glyf.endPtsOfContours[glyf.numberOfContours-1] & 0xFF) << 8;
+    ++numberOfPoints;
 
     u08 *flags = 0;
     pdArrReserve(flags, numberOfPoints);
 
-    FF_TRACE("number of points: %"PRIu16, numberOfPoints);
     for(u16 i = 0; i < numberOfPoints; ++i)
     {
         u08 flag = glyphData[start++];
@@ -132,7 +132,6 @@ glyf readGlyph
         i16 xCoord = 0;
         if(flags[i] & FF_FLAG_X_SHORT_VECTOR)
         {
-            // 1 byte, sign still undetermined
             xCoord = glyphData[start++];
 
             if(!(flags[i] & FF_FLAG_X_IS_SAME_POSX))
@@ -142,20 +141,15 @@ glyf readGlyph
         }
         else if(flags[i] & FF_FLAG_X_IS_SAME_POSX)
         {
-            pdArrPush(glyf.xCoordinates,
-                      glyf.xCoordinates[pdArrSize(glyf.xCoordinates) - 1]);
-            continue;
+            xCoord = 0;
         }
         else
         {
-            xCoord  = (i16)(glyphData[start++]);
-            xCoord |= (i16)(glyphData[start++] << 8);
+            xCoord  = (i16)(glyphData[start++] << 8);
+            xCoord |= (i16)(glyphData[start++]);
         }
 
-        FF_TRACE("X_SHORT_VECTOR:   %"PRIu8, (flags[i] & FF_FLAG_X_SHORT_VECTOR) != 0);
-        FF_TRACE("X_IS_SAME_POSX:   %"PRIu8, (flags[i] & FF_FLAG_X_IS_SAME_POSX) != 0);
-        FF_TRACE("parsed xCoord:    %"PRIi16, xCoord);
-        FF_TRACE("effective xCoord: %"PRIi16, xCoord + xCoordPrev);
+        FF_TRACE("xCoord: %"PRIi16, xCoord + xCoordPrev);
 
         FF_ASSERT(xCoord + xCoordPrev <= glyf.xMax,
                   "coordinate (%"PRIi16") cannot be bigger than xMax (%"PRIi16")",
@@ -165,7 +159,7 @@ glyf readGlyph
                   "coordinate (%"PRIi16") cannot be smaller than xMin (%"PRIi16")",
                   xCoord + xCoordPrev, glyf.xMin);
 
-        pdArrPush(glyf.xCoordinates, xCoord);
+        pdArrPush(glyf.xCoordinates, xCoord + xCoordPrev);
         xCoordPrev += xCoord;
     }
 
@@ -175,7 +169,6 @@ glyf readGlyph
         i16 yCoord = 0;
         if(flags[i] & FF_FLAG_Y_SHORT_VECTOR)
         {
-            // 1 byte, sign still undetermined
             yCoord = glyphData[start++];
 
             if(!(flags[i] & FF_FLAG_Y_IS_SAME_POSY))
@@ -185,20 +178,15 @@ glyf readGlyph
         }
         else if(flags[i] & FF_FLAG_Y_IS_SAME_POSY)
         {
-            pdArrPush(glyf.yCoordinates,
-                      glyf.yCoordinates[pdArrSize(glyf.yCoordinates) - 1]);
-            continue;
+            yCoord = 0;
         }
         else
         {
-            yCoord  = (i16)(glyphData[start++]);
-            yCoord |= (i16)(glyphData[start++] << 8);
+            yCoord  = (i16)(glyphData[start++] << 8);
+            yCoord |= (i16)(glyphData[start++]);
         }
 
-        FF_TRACE("Y_SHORT_VECTOR:   %"PRIu8, (flags[i] & FF_FLAG_Y_SHORT_VECTOR) != 0);
-        FF_TRACE("Y_IS_SAME_POSX:   %"PRIu8, (flags[i] & FF_FLAG_Y_IS_SAME_POSY) != 0);
-        FF_TRACE("parsed yCoord:    %"PRIi16, yCoord);
-        FF_TRACE("effective yCoord: %"PRIi16, yCoord + yCoordPrev);
+        FF_TRACE("yCoord: %"PRIi16, yCoord + yCoordPrev);
 
         FF_ASSERT(yCoord + yCoordPrev <= glyf.yMax,
                   "coordinate (%"PRIi16") cannot be bigger than yMax (%"PRIi16")",
@@ -208,7 +196,7 @@ glyf readGlyph
                   "coordinate (%"PRIi16") cannot be smaller than yMin (%"PRIi16")",
                   yCoord + yCoordPrev, glyf.yMin);
 
-        pdArrPush(glyf.yCoordinates, yCoord);
+        pdArrPush(glyf.yCoordinates, yCoord + yCoordPrev);
         yCoordPrev += yCoord;
     }
 
