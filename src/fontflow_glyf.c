@@ -66,6 +66,12 @@ glyf readGlyph
     glyf.numberOfContours  = (i16)(glyphData[start++] << 8);
     glyf.numberOfContours |= glyphData[start++];
 
+    if(glyf.numberOfContours == -1)
+    {
+        FF_ERROR("composite glyphs are unimplemented.");
+        return glyf;
+    }
+
     glyf.xMin  = (i16)(glyphData[start++] << 8);
     glyf.xMin |= glyphData[start++];
     glyf.yMin  = (i16)(glyphData[start++] << 8);
