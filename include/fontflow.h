@@ -266,8 +266,7 @@ FontData;
 
 extern void ffReadFont
 (
-    FontData *font,
-    u08      *fileBuf
+    FontData *font
 );
 
 // NOTE: interface is still going to change, what do we give back here?

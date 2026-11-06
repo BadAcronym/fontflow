@@ -263,32 +263,39 @@ f_internal void readTable_post
 
 void ffReadFont
 (
-    FontData *font,
-    u08      *fileBuf
+    FontData *font
 ){
+    cmap cmap = {0};
+    head head = {0};
+    maxp maxp = {0};
+
+    font->cmap = &cmap;
+    font->head = &head;
+    font->maxp = &maxp;
+
     u08         byte     = 0;
     u64         index    = 0;
     OffsetTable ofsTable = {0};
 
     for(u08 i = 0; i < 4; ++i)
     {
-        ofsTable.scalerType |= (u32)(fileBuf[index++]) << (3 - i) * 8;
+        ofsTable.scalerType |= (u32)(font->data[index++]) << (3 - i) * 8;
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        ofsTable.numTables |= (u32)(fileBuf[index++]) << (1 - i) * 8;
+        ofsTable.numTables |= (u32)(font->data[index++]) << (1 - i) * 8;
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        ofsTable.searchRange |= (fileBuf[index++]) << (1 - i) * 8;
+        ofsTable.searchRange |= (font->data[index++]) << (1 - i) * 8;
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        ofsTable.entrySelector |= (fileBuf[index++]) << (1 - i) * 8;
+        ofsTable.entrySelector |= (font->data[index++]) << (1 - i) * 8;
     }
     for(u08 i = 0; i < 2; ++i)
     {
-        ofsTable.rangeShift |= (fileBuf[index++]) << (1 - i) * 8;
+        ofsTable.rangeShift |= (font->data[index++]) << (1 - i) * 8;
     }
 
     FF_DEBUG("reading %"PRIu16" tables.", ofsTable.numTables);
@@ -303,25 +310,25 @@ void ffReadFont
 
         for(u08 j = 0; j < 4; ++j)
         {
-            tagBuf[j] = (char)fileBuf[index++];
+            tagBuf[j] = (char)font->data[index++];
         }
         FF_DEBUG("\nread tag: '"PRI_SV"'", ARG_SV(table.tag));
 
         for(u08 j = 0; j < 4; ++j)
         {
-            table.checksum |= (u32)(fileBuf[index++]) << (3 - j) * 8;
+            table.checksum |= (u32)(font->data[index++]) << (3 - j) * 8;
         }
         FF_TRACE("read table checksum:   0x%"PRIX32, table.checksum);
 
         for(u08 j = 0; j < 4; ++j)
         {
-            table.offset |= (u32)(fileBuf[index++]) << (3 - j) * 8;
+            table.offset |= (u32)(font->data[index++]) << (3 - j) * 8;
         }
         FF_TRACE("read table offset:     %"PRIu32, table.offset);
 
         for(u08 j = 0; j < 4; ++j)
         {
-            table.length |= (u32)(fileBuf[index++]) << (3 - j) * 8;
+            table.length |= (u32)(font->data[index++]) << (3 - j) * 8;
         }
         FF_TRACE("read table length:     %"PRIu32, table.length);
 
