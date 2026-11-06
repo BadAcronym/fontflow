@@ -299,47 +299,11 @@ f_internal void readTable_post
     //
 }
 
-int main
+void ffReadFont
 (
-    void
+    FontData *font,
+    u08      *fileBuf
 ){
-    FILE *file = fopen(FONT_PATH, "rb");
-    if(!file)
-    {
-        FF_ERROR("failed to open font file: %s", FONT_PATH);
-        return 1;
-    }
-
-    fseek(file, 0, SEEK_END);
-    u64 filesize = (u64)ftell(file);
-    fseek(file, 0, SEEK_SET);
-
-    u08 *fileBuf = malloc(filesize);
-    if(!fileBuf)
-    {
-        FF_ERROR("failed to allocate fileBuf of size %"PRIu64, filesize);
-        return 2;
-    }
-
-    cmap cmap   = {0};
-    head head   = {0};
-    u16  loca16 = {0};
-    u32  loca32 = {0};
-    maxp maxp   = {0};
-
-    FontData font = {0};
-    font.data   = fileBuf;
-    font.cmap   = &cmap;
-    font.head   = &head;
-    font.maxp   = &maxp;
-
-    if(fread(fileBuf, 1, filesize, file) != filesize)
-    {
-        FF_ERROR("failed to read entire file into fileBuf.");
-        fclose(file);
-        return 3;
-    }
-    fclose(file);
 
     u08         byte     = 0;
     u64         index    = 0;
@@ -442,7 +406,7 @@ int main
         }
         else if(pdSVSame(table.tag, cmapIdent))
         {
-            readTable_cmap(&font, &table);
+            readTable_cmap(font, &table);
         }
         else if(pdSVSame(table.tag, cvarIdent))
         {
@@ -494,7 +458,7 @@ int main
         }
         else if(pdSVSame(table.tag, glyfIdent))
         {
-            readTable_glyf(&font, &table);
+            readTable_glyf(font, &table);
         }
         else if(pdSVSame(table.tag, gvarIdent))
         {
@@ -506,15 +470,15 @@ int main
         }
         else if(pdSVSame(table.tag, headIdent))
         {
-            readTable_head(&font, &table);
+            readTable_head(font, &table);
         }
         else if(pdSVSame(table.tag, hheaIdent))
         {
-            readTable_hhea(&font, &table);
+            readTable_hhea(font, &table);
         }
         else if(pdSVSame(table.tag, hmtxIdent))
         {
-            readTable_hmtx(&font, &table);
+            readTable_hmtx(font, &table);
         }
         else if(pdSVSame(table.tag, hvglIdent))
         {
@@ -542,7 +506,7 @@ int main
         }
         else if(pdSVSame(table.tag, locaIdent))
         {
-            readTable_loca(&font, &table);
+            readTable_loca(font, &table);
         }
         else if(pdSVSame(table.tag, ltagIdent))
         {
@@ -554,7 +518,7 @@ int main
         }
         else if(pdSVSame(table.tag, maxpIdent))
         {
-            readTable_maxp(&font, &table);
+            readTable_maxp(font, &table);
         }
         else if(pdSVSame(table.tag, metaIdent))
         {
@@ -570,7 +534,7 @@ int main
         }
         else if(pdSVSame(table.tag, nameIdent))
         {
-            readTable_name(&font, &table);
+            readTable_name(font, &table);
         }
         else if(pdSVSame(table.tag, opbdIdent))
         {
@@ -582,7 +546,7 @@ int main
         }
         else if(pdSVSame(table.tag, postIdent))
         {
-            readTable_post(&font, &table);
+            readTable_post(font, &table);
         }
         else if(pdSVSame(table.tag, prepIdent))
         {
@@ -619,9 +583,55 @@ int main
         else
         {
             FF_ERROR("unknown tag: '"PRI_SV"'", ARG_SV(table.tag));
-            goto error;
+            return;
         }
     }
+}
+
+int main
+(
+    void
+){
+
+    FILE *file = fopen(FONT_PATH, "rb");
+    if(!file)
+    {
+        FF_ERROR("failed to open font file: %s", FONT_PATH);
+        return 1;
+    }
+
+    fseek(file, 0, SEEK_END);
+    u64 filesize = (u64)ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    u08 *fileBuf = malloc(filesize);
+    if(!fileBuf)
+    {
+        FF_ERROR("failed to allocate fileBuf of size %"PRIu64, filesize);
+        return 1;
+    }
+
+    cmap cmap   = {0};
+    head head   = {0};
+    u16  loca16 = {0};
+    u32  loca32 = {0};
+    maxp maxp   = {0};
+
+    FontData font = {0};
+    font.data = fileBuf;
+    font.cmap = &cmap;
+    font.head = &head;
+    font.maxp = &maxp;
+
+    if(fread(fileBuf, 1, filesize, file) != filesize)
+    {
+        FF_ERROR("failed to read entire file into fileBuf.");
+        fclose(file);
+        goto error;
+    }
+    fclose(file);
+
+    ffReadFont(&font, fileBuf);
 
     char *alphabet = 0;
     for(u16 i = 0; i < 26; ++i)
