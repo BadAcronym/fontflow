@@ -253,3 +253,78 @@ error:
     FF_ERROR("read past the end of the glyph.");
     return (glyf){0};
 }
+
+f_internal u16 getGlyphIndex
+(
+    cmap *cmap,
+    u64  i,
+    u16  c,
+    u16  fixedStartCode
+){
+    i16 fixedIdDelta        = cmap->idDelta[i] >> 8;
+    fixedIdDelta           |= (i16)((cmap->idDelta[i] & 0xFF) << 8);
+
+    u16 fixedIdRangeOffset  = cmap->idRangeOffset[i] >> 8;
+    fixedIdRangeOffset     |= (u16)((cmap->idRangeOffset[i] & 0xFF) << 8);
+
+    if(!fixedIdRangeOffset)
+    {
+        return (u16)(fixedIdDelta + c);
+    }
+
+    u08 *glyphIndexAddr = (u08*)(fixedIdRangeOffset + 2 *
+                                (c - fixedStartCode) + &cmap->idRangeOffset[i]);
+
+    u16 glyphIndex  = (u16)(*glyphIndexAddr++ << 8);
+    glyphIndex     |= *glyphIndexAddr;
+
+    if(glyphIndex)
+    {
+        glyphIndex += fixedIdDelta;
+    }
+
+    return glyphIndex;
+}
+
+// NOTE: interface is still going to change, what do we give back here?
+void ffFindGlyphs
+(
+    FontData *font,
+    u16      *arr
+){
+    FF_TRACE("");
+    u16 *startCode = font->cmap->startCode;
+    u16 *endCode   = font->cmap->endCode;
+    u16 segCount   = font->cmap->segCountX2 / 2;
+    for(u16 i = 0; i < segCount; ++i)
+    {
+        u16 j = 0;
+        while(j < pdArrSize(arr))
+        {
+            u16 fixedStartCode  = (startCode[i] >> 8);
+            fixedStartCode     |= (startCode[i] & 0xFF) << 8;
+            u16 fixedEndCode    = (endCode[i] >> 8);
+            fixedEndCode       |= (endCode[i] & 0xFF) << 8;
+
+            if(fixedStartCode <= arr[j] && fixedEndCode >= arr[j])
+            {
+                u16 glyphIndex = getGlyphIndex(font->cmap, i, arr[j], fixedStartCode);
+
+                FF_DEBUG("glyphIndex of '%c' (0x%X) is %3"PRIu16".",
+                         arr[j], arr[j], glyphIndex);
+
+                FF_ASSERT(glyphIndex < font->maxp->numGlyphs, "glyphIndex of %"PRIu16
+                          " is outside the valid range (< %"PRIu16")",
+                          glyphIndex, font->maxp->numGlyphs);
+
+                glyf glyf = readGlyph(font, glyphIndex);
+
+                pdArrRemove(arr, j);
+            }
+            else
+            {
+                ++j;
+            }
+        }
+    }
+}

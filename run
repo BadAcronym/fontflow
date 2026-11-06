@@ -13,9 +13,10 @@ else
 fi
 
 args_always="-DBUILD_LINUX \
-src/fontflowtest.c \
+src/fontflow_main.c \
 src/fontflow_cmap.c \
 src/fontflow_glyf.c \
+src/fontflowtest.c \
 vendor/puddle/src/pd_string_view.c \
 -Iinclude/ \
 -Ivendor/puddle/include/ \

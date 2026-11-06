@@ -264,6 +264,19 @@ typedef struct FontData
 }
 FontData;
 
+extern void ffReadFont
+(
+    FontData *font,
+    u08      *fileBuf
+);
+
+// NOTE: interface is still going to change, what do we give back here?
+extern void ffFindGlyphs
+(
+    FontData *font,
+    u16      *arr
+);
+
 extern void readTable_cmap
 (
     FontData   *font,
