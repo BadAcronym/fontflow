@@ -16,62 +16,6 @@
 #define FF_FLAG_OVERLAP_SIMPLE 0x40
 #define FF_FLAG_RESERVED       0x80
 
-s_global StringView GDEFIdent = { .data = "GDEF", .size = 4 };
-s_global StringView GPOSIdent = { .data = "GPOS", .size = 4 };
-s_global StringView GSUBIdent = { .data = "GSUB", .size = 4 };
-
-s_global StringView acntIdent = { .data = "acnt", .size = 4 };
-s_global StringView ankrIdent = { .data = "ankr", .size = 4 };
-s_global StringView avarIdent = { .data = "avar", .size = 4 };
-s_global StringView bdatIdent = { .data = "bdat", .size = 4 };
-s_global StringView bhedIdent = { .data = "bhed", .size = 4 };
-s_global StringView blocIdent = { .data = "bloc", .size = 4 };
-s_global StringView bslnIdent = { .data = "bsln", .size = 4 };
-s_global StringView cmapIdent = { .data = "cmap", .size = 4 };
-s_global StringView cvarIdent = { .data = "cvar", .size = 4 };
-s_global StringView cvtIdent  = { .data = "cvt ", .size = 4 };
-s_global StringView EBSCIdent = { .data = "EBSC", .size = 4 };
-s_global StringView fdscIdent = { .data = "fdsc", .size = 4 };
-s_global StringView featIdent = { .data = "feat", .size = 4 };
-s_global StringView FFTMIdent = { .data = "FFTM", .size = 4 };
-s_global StringView fmtxIdent = { .data = "fmtx", .size = 4 };
-s_global StringView fondIdent = { .data = "fond", .size = 4 };
-s_global StringView fpgmIdent = { .data = "fpgm", .size = 4 };
-s_global StringView fvarIdent = { .data = "fvar", .size = 4 };
-s_global StringView gaspIdent = { .data = "gasp", .size = 4 };
-s_global StringView gcidIdent = { .data = "gcid", .size = 4 };
-s_global StringView glyfIdent = { .data = "glyf", .size = 4 };
-s_global StringView gvarIdent = { .data = "gvar", .size = 4 };
-s_global StringView hdmxIdent = { .data = "hdmx", .size = 4 };
-s_global StringView headIdent = { .data = "head", .size = 4 };
-s_global StringView hheaIdent = { .data = "hhea", .size = 4 };
-s_global StringView hmtxIdent = { .data = "hmtx", .size = 4 };
-s_global StringView hvglIdent = { .data = "hvgl", .size = 4 };
-s_global StringView hvpmIdent = { .data = "hvpm", .size = 4 };
-s_global StringView justIdent = { .data = "just", .size = 4 };
-s_global StringView kernIdent = { .data = "kern", .size = 4 };
-s_global StringView kerxIdent = { .data = "kerx", .size = 4 };
-s_global StringView lcarIdent = { .data = "lcar", .size = 4 };
-s_global StringView locaIdent = { .data = "loca", .size = 4 };
-s_global StringView ltagIdent = { .data = "ltag", .size = 4 };
-s_global StringView MATHIdent = { .data = "MATH", .size = 4 };
-s_global StringView maxpIdent = { .data = "maxp", .size = 4 };
-s_global StringView metaIdent = { .data = "meta", .size = 4 };
-s_global StringView mortIdent = { .data = "mort", .size = 4 };
-s_global StringView morxIdent = { .data = "morx", .size = 4 };
-s_global StringView nameIdent = { .data = "name", .size = 4 };
-s_global StringView opbdIdent = { .data = "opbd", .size = 4 };
-s_global StringView OS2Ident  = { .data = "OS/2", .size = 4 };
-s_global StringView postIdent = { .data = "post", .size = 4 };
-s_global StringView prepIdent = { .data = "prep", .size = 4 };
-s_global StringView propIdent = { .data = "prop", .size = 4 };
-s_global StringView sbixIdent = { .data = "sbix", .size = 4 };
-s_global StringView trakIdent = { .data = "trak", .size = 4 };
-s_global StringView vheaIdent = { .data = "vhea", .size = 4 };
-s_global StringView vmtxIdent = { .data = "vmtx", .size = 4 };
-s_global StringView xrefIdent = { .data = "xref", .size = 4 };
-s_global StringView ZapfIdent = { .data = "Zapf", .size = 4 };
-
 typedef struct FFL
 {
     i16 before;
