@@ -24,8 +24,15 @@ int main
         pdArrPush(alphabet, (u16)('A' + i));
     }
 
-    ffFindGlyphs(&font, alphabet);
+    glyf *glyphs = ffFindGlyphs(&font, alphabet);
 
+    for(u16 i = 0; i < pdArrSize(glyphs); ++i)
+    {
+        pdArrFree(glyphs[i].flags);
+        pdArrFree(glyphs[i].xCoordinates);
+        pdArrFree(glyphs[i].yCoordinates);
+    }
+    pdArrFree(glyphs);
     pdArrFree(alphabet);
     free(file.data);
 }

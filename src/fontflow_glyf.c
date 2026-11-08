@@ -125,9 +125,7 @@ glyf readGlyph
     numberOfPoints     |= (glyph.endPtsOfContours[glyph.numberOfContours-1] & 0xFF) << 8;
     ++numberOfPoints;
 
-    u08 *flags = 0;
-    pdArrReserve(flags, numberOfPoints);
-
+    pdArrReserve(glyph.flags, numberOfPoints);
     for(u16 i = 0; i < numberOfPoints; ++i)
     {
         if(start > end)
@@ -137,7 +135,7 @@ glyf readGlyph
         u08 flag = glyphData[start++];
         FF_ASSERT((flag & FF_FLAG_RESERVED) == 0, "flag reserved bit needs to be 0.");
 
-        pdArrPush(flags, flag);
+        pdArrPush(glyph.flags, flag);
 
         if(flag & FF_FLAG_REPEAT)
         {
@@ -146,16 +144,17 @@ glyf readGlyph
 
             for(u08 j = 0; j < repeat; ++j)
             {
-                pdArrPush(flags, flag);
+                pdArrPush(glyph.flags, flag);
             }
         }
     }
 
-    FF_ASSERT(pdArrSize(flags) == numberOfPoints,
+    FF_ASSERT(pdArrSize(glyph.flags) == numberOfPoints,
               "must read exactly numberOfPoints flags. read: %"
               PRIu64", expected: %"PRIu16,
-              pdArrSize(flags), numberOfPoints);
+              pdArrSize(glyph.flags), numberOfPoints);
 
+    pdArrReserve(glyph.xCoordinates, numberOfPoints);
     i16 xCoordPrev = 0;
     for(u16 i = 0; i < numberOfPoints; ++i)
     {
@@ -164,16 +163,16 @@ glyf readGlyph
             goto error;
         }
         i16 xCoord = 0;
-        if(flags[i] & FF_FLAG_X_SHORT_VECTOR)
+        if(glyph.flags[i] & FF_FLAG_X_SHORT_VECTOR)
         {
             xCoord = glyphData[start++];
 
-            if(!(flags[i] & FF_FLAG_X_IS_SAME_POSX))
+            if(!(glyph.flags[i] & FF_FLAG_X_IS_SAME_POSX))
             {
                 xCoord *= -1;
             }
         }
-        else if(flags[i] & FF_FLAG_X_IS_SAME_POSX)
+        else if(glyph.flags[i] & FF_FLAG_X_IS_SAME_POSX)
         {
             xCoord = 0;
         }
@@ -195,6 +194,7 @@ glyf readGlyph
         xCoordPrev += xCoord;
     }
 
+    pdArrReserve(glyph.yCoordinates, numberOfPoints);
     i16 yCoordPrev = 0;
     for(u16 i = 0; i < numberOfPoints; ++i)
     {
@@ -203,16 +203,16 @@ glyf readGlyph
             goto error;
         }
         i16 yCoord = 0;
-        if(flags[i] & FF_FLAG_Y_SHORT_VECTOR)
+        if(glyph.flags[i] & FF_FLAG_Y_SHORT_VECTOR)
         {
             yCoord = glyphData[start++];
 
-            if(!(flags[i] & FF_FLAG_Y_IS_SAME_POSY))
+            if(!(glyph.flags[i] & FF_FLAG_Y_IS_SAME_POSY))
             {
                 yCoord *= -1;
             }
         }
-        else if(flags[i] & FF_FLAG_Y_IS_SAME_POSY)
+        else if(glyph.flags[i] & FF_FLAG_Y_IS_SAME_POSY)
         {
             yCoord = 0;
         }
@@ -239,7 +239,7 @@ glyf readGlyph
     {
         FF_TRACE("point: (%5"PRIi16", %5"PRIi16"), ON_POINT: %"PRIu8,
                  glyph.xCoordinates[i], glyph.yCoordinates[i],
-                 (flags[i] & FF_FLAG_ON_CURVE_POINT) != 0);
+                 (glyph.flags[i] & FF_FLAG_ON_CURVE_POINT) != 0);
     }
     #endif
 
@@ -287,8 +287,7 @@ f_internal u16 getGlyphIndex
     return glyphIndex;
 }
 
-// NOTE: interface is still going to change, what do we give back here?
-void ffFindGlyphs
+glyf* ffFindGlyphs
 (
     FontData *font,
     u16      *input
@@ -296,6 +295,10 @@ void ffFindGlyphs
     u16 *arr = 0;
     pdArrReserve(arr, pdArrSize(input));
     memcpy(arr, input, pdArrSize(input) * 2);
+    pdArrSize(arr) = pdArrSize(input);
+
+    glyf *glyphs = 0;
+    pdArrReserve(glyphs, pdArrSize(input));
 
     FF_TRACE("");
     u16 *startCode = font->cmap.startCode;
@@ -322,7 +325,7 @@ void ffFindGlyphs
                           " is outside the valid range (< %"PRIu16")",
                           glyphIndex, font->maxp.numGlyphs);
 
-                glyf glyf = readGlyph(font, glyphIndex);
+                pdArrPush(glyphs, readGlyph(font, glyphIndex));
 
                 pdArrRemove(arr, j);
             }
@@ -334,4 +337,6 @@ void ffFindGlyphs
     }
 
     pdArrFree(arr);
+
+    return glyphs;
 }

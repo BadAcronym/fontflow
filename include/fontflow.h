@@ -213,8 +213,7 @@ extern void ffReadFont
     FontData *font
 );
 
-// NOTE: interface is still going to change, what do we give back here?
-extern void ffFindGlyphs
+extern glyf* ffFindGlyphs
 (
     FontData *font,
     u16      *arr
