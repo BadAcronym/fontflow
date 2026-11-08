@@ -237,8 +237,9 @@ glyf readGlyph
     #ifdef FF_PRI_TRACE
     for(u16 i = 0; i < numberOfPoints; ++i)
     {
-        FF_TRACE("point: (%"PRIi16", %"PRIi16")",
-                 glyph.xCoordinates[i], glyph.yCoordinates[i]);
+        FF_TRACE("point: (%5"PRIi16", %5"PRIi16"), ON_POINT: %"PRIu8,
+                 glyph.xCoordinates[i], glyph.yCoordinates[i],
+                 (flags[i] & FF_FLAG_ON_CURVE_POINT) != 0);
     }
     #endif
 
@@ -290,12 +291,16 @@ f_internal u16 getGlyphIndex
 void ffFindGlyphs
 (
     FontData *font,
-    u16      *arr
+    u16      *input
 ){
+    u16 *arr = 0;
+    pdArrReserve(arr, pdArrSize(input));
+    memcpy(arr, input, pdArrSize(input) * 2);
+
     FF_TRACE("");
-    u16 *startCode = font->cmap->startCode;
-    u16 *endCode   = font->cmap->endCode;
-    u16 segCount   = font->cmap->segCountX2 / 2;
+    u16 *startCode = font->cmap.startCode;
+    u16 *endCode   = font->cmap.endCode;
+    u16 segCount   = font->cmap.segCountX2 / 2;
     for(u16 i = 0; i < segCount; ++i)
     {
         u16 j = 0;
@@ -308,14 +313,14 @@ void ffFindGlyphs
 
             if(fixedStartCode <= arr[j] && fixedEndCode >= arr[j])
             {
-                u16 glyphIndex = getGlyphIndex(font->cmap, i, arr[j], fixedStartCode);
+                u16 glyphIndex = getGlyphIndex(&font->cmap, i, arr[j], fixedStartCode);
 
                 FF_DEBUG("glyphIndex of '%c' (0x%X) is %3"PRIu16".",
                          arr[j], arr[j], glyphIndex);
 
-                FF_ASSERT(glyphIndex < font->maxp->numGlyphs, "glyphIndex of %"PRIu16
+                FF_ASSERT(glyphIndex < font->maxp.numGlyphs, "glyphIndex of %"PRIu16
                           " is outside the valid range (< %"PRIu16")",
-                          glyphIndex, font->maxp->numGlyphs);
+                          glyphIndex, font->maxp.numGlyphs);
 
                 glyf glyf = readGlyph(font, glyphIndex);
 
@@ -327,4 +332,6 @@ void ffFindGlyphs
             }
         }
     }
+
+    pdArrFree(arr);
 }

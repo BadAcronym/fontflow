@@ -71,34 +71,34 @@ f_internal void readCmapFormat_4
 
     FF_TRACE("\nreading cmap format 4 @ %p.", subtableData);
 
-    font->cmap->segCountX2  = (u16)(subtableData[(*subIndex)++] << 8);
-    font->cmap->segCountX2 |= subtableData[(*subIndex)++];
-    u16 segCount = font->cmap->segCountX2 / 2;
+    font->cmap.segCountX2  = (u16)(subtableData[(*subIndex)++] << 8);
+    font->cmap.segCountX2 |= subtableData[(*subIndex)++];
+    u16 segCount = font->cmap.segCountX2 / 2;
     FF_TRACE("segCount:              %"PRIu16, segCount);
 
-    font->cmap->searchRange  = (u16)(subtableData[(*subIndex)++] << 8);
-    font->cmap->searchRange |= subtableData[(*subIndex)++];
-    FF_TRACE("searchRange:           %"PRIu16, font->cmap->searchRange);
+    font->cmap.searchRange  = (u16)(subtableData[(*subIndex)++] << 8);
+    font->cmap.searchRange |= subtableData[(*subIndex)++];
+    FF_TRACE("searchRange:           %"PRIu16, font->cmap.searchRange);
 
     // assert that searchRange is 2 * (2**floor(log2(segCount)))
 
-    font->cmap->entrySelector  = (u16)(subtableData[(*subIndex)++] << 8);
-    font->cmap->entrySelector |= subtableData[(*subIndex)++];
-    FF_TRACE("entrySelector:         %"PRIu16, font->cmap->entrySelector);
+    font->cmap.entrySelector  = (u16)(subtableData[(*subIndex)++] << 8);
+    font->cmap.entrySelector |= subtableData[(*subIndex)++];
+    FF_TRACE("entrySelector:         %"PRIu16, font->cmap.entrySelector);
 
     // assert that entrySelector is log2(searchRange/2)
 
-    font->cmap->rangeShift  = (u16)(subtableData[(*subIndex)++] << 8);
-    font->cmap->rangeShift |= subtableData[(*subIndex)++];
-    FF_TRACE("rangeShift:            %"PRIu16, font->cmap->rangeShift);
+    font->cmap.rangeShift  = (u16)(subtableData[(*subIndex)++] << 8);
+    font->cmap.rangeShift |= subtableData[(*subIndex)++];
+    FF_TRACE("rangeShift:            %"PRIu16, font->cmap.rangeShift);
 
-    FF_ASSERT(font->cmap->rangeShift == font->cmap->segCountX2 -
-              font->cmap->searchRange,
+    FF_ASSERT(font->cmap.rangeShift == font->cmap.segCountX2 -
+              font->cmap.searchRange,
               "rangeshift was expected to be %"PRIu16", instead got: %"PRIu16,
-              font->cmap->segCountX2 - font->cmap->searchRange,
-              font->cmap->rangeShift);
+              font->cmap.segCountX2 - font->cmap.searchRange,
+              font->cmap.rangeShift);
 
-    font->cmap->endCode = (u16*)(&subtableData[(*subIndex)]);
+    font->cmap.endCode = (u16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
     u16 reservedPad  = (u16)(subtableData[(*subIndex)++] << 8);
@@ -107,16 +107,16 @@ f_internal void readCmapFormat_4
 
     FF_ASSERT(!reservedPad, "reservedPad in cmap subtable format 4 needs to be 0.");
 
-    font->cmap->startCode = (u16*)(&subtableData[(*subIndex)]);
+    font->cmap.startCode = (u16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
-    font->cmap->idDelta = (i16*)(&subtableData[(*subIndex)]);
+    font->cmap.idDelta = (i16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
-    font->cmap->idRangeOffset = (u16*)(&subtableData[(*subIndex)]);
+    font->cmap.idRangeOffset = (u16*)(&subtableData[(*subIndex)]);
     (*subIndex) += segCount * 2;
 
-    font->cmap->glyphIdArray16 = (u16*)(&subtableData[(*subIndex)]);
+    font->cmap.glyphIdArray16 = (u16*)(&subtableData[(*subIndex)]);
 }
 
 f_internal void readCmapFormat_6
@@ -298,9 +298,9 @@ chosen:
             FF_TRACE("language:              %"PRIu32, language);
         }
 
-        font->cmap->subtableFormat = info.subtableFormat;
-        font->cmap->length         = length;
-        font->cmap->language       = language;
+        font->cmap.subtableFormat = info.subtableFormat;
+        font->cmap.length         = length;
+        font->cmap.language       = language;
 
         if(info.subtableFormat == 0)
         {

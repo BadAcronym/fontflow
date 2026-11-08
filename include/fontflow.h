@@ -199,12 +199,12 @@ maxp;
 typedef struct FontData
 {
     u08  *data;
-    cmap *cmap;
+    cmap cmap;
     u08  *glyfData;
-    head *head;
+    head head;
     u16  *loca16;
     u32  *loca32;
-    maxp *maxp;
+    maxp maxp;
 }
 FontData;
 

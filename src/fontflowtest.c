@@ -20,10 +20,12 @@ int main
     u16 *alphabet = 0;
     for(u16 i = 0; i < 26; ++i)
     {
+        pdArrPush(alphabet, (u16)('a' + i));
         pdArrPush(alphabet, (u16)('A' + i));
     }
 
     ffFindGlyphs(&font, alphabet);
 
+    pdArrFree(alphabet);
     free(file.data);
 }

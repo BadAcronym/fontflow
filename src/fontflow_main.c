@@ -67,98 +67,98 @@ f_internal void readTable_head
     u64 index     = 0;
     u08 *headData = font->data + entry->offset;
 
-    font->head->majorVersion = 0;
-    font->head->minorVersion = 0;
+    font->head.majorVersion = 0;
+    font->head.minorVersion = 0;
 
-    font->head->majorVersion  = (u16)(headData[index++] << 8);
-    font->head->majorVersion |= (u16)(headData[index++]);
-    font->head->minorVersion  = (u16)(headData[index++] << 8);
-    font->head->minorVersion |= (u16)(headData[index++]);
+    font->head.majorVersion  = (u16)(headData[index++] << 8);
+    font->head.majorVersion |= (u16)(headData[index++]);
+    font->head.minorVersion  = (u16)(headData[index++] << 8);
+    font->head.minorVersion |= (u16)(headData[index++]);
 
-    font->head->fontRevision.before  = (i16)(headData[index++] << 8);
-    font->head->fontRevision.before |= (i16)(headData[index++]);
-    font->head->fontRevision.after   = (u16)(headData[index++] << 8);
-    font->head->fontRevision.after  |= (u16)(headData[index++]);
+    font->head.fontRevision.before  = (i16)(headData[index++] << 8);
+    font->head.fontRevision.before |= (i16)(headData[index++]);
+    font->head.fontRevision.after   = (u16)(headData[index++] << 8);
+    font->head.fontRevision.after  |= (u16)(headData[index++]);
 
     FF_TRACE("head version:          %"PRIx16".%"PRIx16,
-             font->head->majorVersion, font->head->minorVersion);
+             font->head.majorVersion, font->head.minorVersion);
     FF_TRACE("head revision:         %"PRIx16".%"PRIx16,
-             font->head->fontRevision.before, font->head->fontRevision.after);
+             font->head.fontRevision.before, font->head.fontRevision.after);
 
-    font->head->checksumAdjustment = 0;
+    font->head.checksumAdjustment = 0;
     for(u08 i = 0; i < 4; ++i)
     {
-        font->head->checksumAdjustment |= (u32)(headData[index++]) << ((3 - i) * 8);
+        font->head.checksumAdjustment |= (u32)(headData[index++]) << ((3 - i) * 8);
     }
-    FF_TRACE("checksumAdj:           %"PRIu32, font->head->checksumAdjustment);
+    FF_TRACE("checksumAdj:           %"PRIu32, font->head.checksumAdjustment);
 
-    font->head->magicNumber = 0;
+    font->head.magicNumber = 0;
     for(u08 i = 0; i < 4; ++i)
     {
-        font->head->magicNumber |= (u32)(headData[index++]) << ((3 - i) * 8);
+        font->head.magicNumber |= (u32)(headData[index++]) << ((3 - i) * 8);
     }
-    FF_TRACE("magicNumber:           0x%"PRIX32, font->head->magicNumber);
+    FF_TRACE("magicNumber:           0x%"PRIX32, font->head.magicNumber);
 
-    FF_ASSERT(font->head->magicNumber == 0x5F0F3CF5, "magicNumber does not equal "
-              "0x5F0F3CF5, instead is: 0x%"PRIX32, font->head->magicNumber);
+    FF_ASSERT(font->head.magicNumber == 0x5F0F3CF5, "magicNumber does not equal "
+              "0x5F0F3CF5, instead is: 0x%"PRIX32, font->head.magicNumber);
 
-    font->head->flags  = (u16)(headData[index++] << 8);
-    font->head->flags |= (u16)(headData[index++]);
-    FF_TRACE("flags:                 %"PRIu16, font->head->flags);
+    font->head.flags  = (u16)(headData[index++] << 8);
+    font->head.flags |= (u16)(headData[index++]);
+    FF_TRACE("flags:                 %"PRIu16, font->head.flags);
 
-    font->head->unitsPerEm  = (u16)(headData[index++] << 8);
-    font->head->unitsPerEm |= (u16)(headData[index++]);
-    FF_TRACE("unitsPerEm:            %"PRIu16, font->head->unitsPerEm);
+    font->head.unitsPerEm  = (u16)(headData[index++] << 8);
+    font->head.unitsPerEm |= (u16)(headData[index++]);
+    FF_TRACE("unitsPerEm:            %"PRIu16, font->head.unitsPerEm);
 
-    font->head->created = 0;
+    font->head.created = 0;
     for(u08 i = 0; i < 8; ++i)
     {
-        font->head->created |= (i64)(headData[index++]) << ((7 - i) * 8);
+        font->head.created |= (i64)(headData[index++]) << ((7 - i) * 8);
     }
-    FF_TRACE("created:               %"PRIi64, font->head->created);
+    FF_TRACE("created:               %"PRIi64, font->head.created);
 
-    font->head->modified = 0;
+    font->head.modified = 0;
     for(u08 i = 0; i < 8; ++i)
     {
-        font->head->modified |= (i64)(headData[index++]) << ((7 - i) * 8);
+        font->head.modified |= (i64)(headData[index++]) << ((7 - i) * 8);
     }
-    FF_TRACE("modified:              %"PRIi64, font->head->modified);
+    FF_TRACE("modified:              %"PRIi64, font->head.modified);
 
-    font->head->xMin  = (i16)(headData[index++] << 8);
-    font->head->xMin |= (i16)(headData[index++]);
-    FF_TRACE("xMin:                  %"PRIi16, font->head->xMin);
+    font->head.xMin  = (i16)(headData[index++] << 8);
+    font->head.xMin |= (i16)(headData[index++]);
+    FF_TRACE("xMin:                  %"PRIi16, font->head.xMin);
 
-    font->head->yMin  = (i16)(headData[index++] << 8);
-    font->head->yMin |= (i16)(headData[index++]);
-    FF_TRACE("yMin:                  %"PRIi16, font->head->yMin);
+    font->head.yMin  = (i16)(headData[index++] << 8);
+    font->head.yMin |= (i16)(headData[index++]);
+    FF_TRACE("yMin:                  %"PRIi16, font->head.yMin);
 
-    font->head->xMax  = (i16)(headData[index++] << 8);
-    font->head->xMax |= (i16)(headData[index++]);
-    FF_TRACE("xMax:                  %"PRIi16, font->head->xMax);
+    font->head.xMax  = (i16)(headData[index++] << 8);
+    font->head.xMax |= (i16)(headData[index++]);
+    FF_TRACE("xMax:                  %"PRIi16, font->head.xMax);
 
-    font->head->yMax  = (i16)(headData[index++] << 8);
-    font->head->yMax |= (i16)(headData[index++]);
-    FF_TRACE("yMax:                  %"PRIi16, font->head->yMax);
+    font->head.yMax  = (i16)(headData[index++] << 8);
+    font->head.yMax |= (i16)(headData[index++]);
+    FF_TRACE("yMax:                  %"PRIi16, font->head.yMax);
 
-    font->head->macStyle  = (u16)(headData[index++] << 8);
-    font->head->macStyle |= (u16)(headData[index++]);
-    FF_TRACE("macStyle:              %"PRIu16, font->head->macStyle);
+    font->head.macStyle  = (u16)(headData[index++] << 8);
+    font->head.macStyle |= (u16)(headData[index++]);
+    FF_TRACE("macStyle:              %"PRIu16, font->head.macStyle);
 
-    font->head->lowestRecPPEM  = (u16)(headData[index++] << 8);
-    font->head->lowestRecPPEM |= (u16)(headData[index++]);
-    FF_TRACE("lowestRecPPEM:         %"PRIu16, font->head->lowestRecPPEM);
+    font->head.lowestRecPPEM  = (u16)(headData[index++] << 8);
+    font->head.lowestRecPPEM |= (u16)(headData[index++]);
+    FF_TRACE("lowestRecPPEM:         %"PRIu16, font->head.lowestRecPPEM);
 
-    font->head->fontDirectionHint  = (i16)(headData[index++] << 8);
-    font->head->fontDirectionHint |= (i16)(headData[index++]);
-    FF_TRACE("fontDirectionHint:     %"PRIi16, font->head->fontDirectionHint);
+    font->head.fontDirectionHint  = (i16)(headData[index++] << 8);
+    font->head.fontDirectionHint |= (i16)(headData[index++]);
+    FF_TRACE("fontDirectionHint:     %"PRIi16, font->head.fontDirectionHint);
 
-    font->head->indexToLocFormat  = (i16)(headData[index++] << 8);
-    font->head->indexToLocFormat |= (i16)(headData[index++]);
-    FF_TRACE("indexToLocFormat:      %"PRIi16, font->head->indexToLocFormat);
+    font->head.indexToLocFormat  = (i16)(headData[index++] << 8);
+    font->head.indexToLocFormat |= (i16)(headData[index++]);
+    FF_TRACE("indexToLocFormat:      %"PRIi16, font->head.indexToLocFormat);
 
-    font->head->glyphDataFormat  = (i16)(headData[index++] << 8);
-    font->head->glyphDataFormat |= (i16)(headData[index++]);
-    FF_TRACE("glyphDataFormat:       %"PRIi16, font->head->glyphDataFormat);
+    font->head.glyphDataFormat  = (i16)(headData[index++] << 8);
+    font->head.glyphDataFormat |= (i16)(headData[index++]);
+    FF_TRACE("glyphDataFormat:       %"PRIi16, font->head.glyphDataFormat);
 }
 
 f_internal void readTable_hhea
@@ -195,7 +195,7 @@ f_internal void readTable_loca
     u64 index     = 0;
     u08 *locaData = font->data + entry->offset;
 
-    if(font->head->indexToLocFormat == 1)
+    if(font->head.indexToLocFormat == 1)
     {
         font->loca32 = (u32*)locaData;
         FF_TRACE("read offset size:      32");
@@ -224,9 +224,9 @@ f_internal void readTable_maxp
     FF_TRACE("maxp version:          %"PRIx16".%"PRIx16,
              version.before, version.after);
 
-    font->maxp->numGlyphs  = (u16)(maxpData[index++] << 8);
-    font->maxp->numGlyphs |= (u16)(maxpData[index++]);
-    FF_TRACE("numGlyphs:             %"PRIu16, font->maxp->numGlyphs);
+    font->maxp.numGlyphs  = (u16)(maxpData[index++] << 8);
+    font->maxp.numGlyphs |= (u16)(maxpData[index++]);
+    FF_TRACE("numGlyphs:             %"PRIu16, font->maxp.numGlyphs);
 
     // if version is 0.5 (openType fonts with 'CFF ' table, we need to abort
     // reading past numGlyphs, because that's all that this table has.
@@ -235,60 +235,60 @@ f_internal void readTable_maxp
         return;
     }
 
-    font->maxp->maxPoints  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxPoints |= (u16)(maxpData[index++]);
-    FF_TRACE("maxPoints:             %"PRIu16, font->maxp->maxPoints);
+    font->maxp.maxPoints  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxPoints |= (u16)(maxpData[index++]);
+    FF_TRACE("maxPoints:             %"PRIu16, font->maxp.maxPoints);
 
-    font->maxp->maxContours  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxContours |= (u16)(maxpData[index++]);
-    FF_TRACE("maxContours:           %"PRIu16, font->maxp->maxContours);
+    font->maxp.maxContours  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxContours |= (u16)(maxpData[index++]);
+    FF_TRACE("maxContours:           %"PRIu16, font->maxp.maxContours);
 
-    font->maxp->maxCompositePoints  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxCompositePoints |= (u16)(maxpData[index++]);
-    FF_TRACE("maxCompositePoints:    %"PRIu16, font->maxp->maxCompositePoints);
+    font->maxp.maxCompositePoints  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxCompositePoints |= (u16)(maxpData[index++]);
+    FF_TRACE("maxCompositePoints:    %"PRIu16, font->maxp.maxCompositePoints);
 
-    font->maxp->maxCompositeContours  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxCompositeContours |= (u16)(maxpData[index++]);
-    FF_TRACE("maxCompositeContours:  %"PRIu16, font->maxp->maxCompositeContours);
+    font->maxp.maxCompositeContours  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxCompositeContours |= (u16)(maxpData[index++]);
+    FF_TRACE("maxCompositeContours:  %"PRIu16, font->maxp.maxCompositeContours);
 
-    font->maxp->maxZones  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxZones |= (u16)(maxpData[index++]);
-    FF_TRACE("maxZones:              %"PRIu16, font->maxp->maxZones);
+    font->maxp.maxZones  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxZones |= (u16)(maxpData[index++]);
+    FF_TRACE("maxZones:              %"PRIu16, font->maxp.maxZones);
 
-    FF_ASSERT(font->maxp->maxZones == 2, "maxZones  %"PRIu16" is not 2.",
-              font->maxp->maxZones);
+    FF_ASSERT(font->maxp.maxZones == 2, "maxZones  %"PRIu16" is not 2.",
+              font->maxp.maxZones);
 
-    font->maxp->maxTwilightPoints  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxTwilightPoints |= (u16)(maxpData[index++]);
-    FF_TRACE("maxTwilightPoints:     %"PRIu16, font->maxp->maxTwilightPoints);
+    font->maxp.maxTwilightPoints  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxTwilightPoints |= (u16)(maxpData[index++]);
+    FF_TRACE("maxTwilightPoints:     %"PRIu16, font->maxp.maxTwilightPoints);
 
-    font->maxp->maxStorage  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxStorage |= (u16)(maxpData[index++]);
-    FF_TRACE("maxStorage:            %"PRIu16, font->maxp->maxStorage);
+    font->maxp.maxStorage  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxStorage |= (u16)(maxpData[index++]);
+    FF_TRACE("maxStorage:            %"PRIu16, font->maxp.maxStorage);
 
-    font->maxp->maxFunctionDefs  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxFunctionDefs |= (u16)(maxpData[index++]);
-    FF_TRACE("maxFunctionDefs:       %"PRIu16, font->maxp->maxFunctionDefs);
+    font->maxp.maxFunctionDefs  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxFunctionDefs |= (u16)(maxpData[index++]);
+    FF_TRACE("maxFunctionDefs:       %"PRIu16, font->maxp.maxFunctionDefs);
 
-    font->maxp->maxInstructionDefs  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxInstructionDefs |= (u16)(maxpData[index++]);
-    FF_TRACE("maxInstructionDefs:    %"PRIu16, font->maxp->maxInstructionDefs);
+    font->maxp.maxInstructionDefs  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxInstructionDefs |= (u16)(maxpData[index++]);
+    FF_TRACE("maxInstructionDefs:    %"PRIu16, font->maxp.maxInstructionDefs);
 
-    font->maxp->maxStackElements  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxStackElements |= (u16)(maxpData[index++]);
-    FF_TRACE("maxStackElements:      %"PRIu16, font->maxp->maxStackElements);
+    font->maxp.maxStackElements  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxStackElements |= (u16)(maxpData[index++]);
+    FF_TRACE("maxStackElements:      %"PRIu16, font->maxp.maxStackElements);
 
-    font->maxp->maxSizeOfInstructions  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxSizeOfInstructions |= (u16)(maxpData[index++]);
-    FF_TRACE("maxSizeOfInstructions: %"PRIu16, font->maxp->maxSizeOfInstructions);
+    font->maxp.maxSizeOfInstructions  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxSizeOfInstructions |= (u16)(maxpData[index++]);
+    FF_TRACE("maxSizeOfInstructions: %"PRIu16, font->maxp.maxSizeOfInstructions);
 
-    font->maxp->maxComponentElements  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxComponentElements |= (u16)(maxpData[index++]);
-    FF_TRACE("maxComponentElements:  %"PRIu16, font->maxp->maxComponentElements);
+    font->maxp.maxComponentElements  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxComponentElements |= (u16)(maxpData[index++]);
+    FF_TRACE("maxComponentElements:  %"PRIu16, font->maxp.maxComponentElements);
 
-    font->maxp->maxComponentDepth  = (u16)(maxpData[index++] << 8);
-    font->maxp->maxComponentDepth |= (u16)(maxpData[index++]);
-    FF_TRACE("maxComponentDepth:     %"PRIu16, font->maxp->maxComponentDepth);
+    font->maxp.maxComponentDepth  = (u16)(maxpData[index++] << 8);
+    font->maxp.maxComponentDepth |= (u16)(maxpData[index++]);
+    FF_TRACE("maxComponentDepth:     %"PRIu16, font->maxp.maxComponentDepth);
 }
 
 f_internal void readTable_name
@@ -321,14 +321,6 @@ void ffReadFont
 (
     FontData *font
 ){
-    cmap cmap = {0};
-    head head = {0};
-    maxp maxp = {0};
-
-    font->cmap = &cmap;
-    font->head = &head;
-    font->maxp = &maxp;
-
     u08         byte     = 0;
     u64         index    = 0;
     OffsetTable ofsTable = {0};
