@@ -317,6 +317,19 @@ f_internal void readTable_post
     //
 }
 
+f_internal void readTable_vmtx
+(
+    FontData   *font,
+    TableEntry *entry
+){
+    u64 index     = 0;
+    u08 *vmtxData = font->data + entry->offset;
+
+    //
+    FF_WARN("required table 'vmtx' not implemented.");
+    //
+}
+
 void ffReadFont
 (
     FontData *font
@@ -586,7 +599,7 @@ void ffReadFont
         }
         else if(pdSVSame(table.tag, vmtxIdent))
         {
-            // ignore its data for now
+            readTable_vmtx(font, &table);
         }
         else if(pdSVSame(table.tag, xrefIdent))
         {
