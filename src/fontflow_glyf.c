@@ -327,7 +327,7 @@ glyf* ffFindGlyphs
 
                 pdArrPush(glyphs, readGlyph(font, glyphIndex));
 
-                pdArrRemove(arr, j);
+                pdArrRemove(arr, j, 0);
             }
             else
             {
